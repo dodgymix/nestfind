@@ -99,10 +99,8 @@
     .btn-primary { width: 100%; padding: 12px; background: var(--green); color: white; border: none; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
     .btn-primary:hover { background: var(--green-dark); }
     .btn-primary:disabled { background: var(--text-tertiary); cursor: not-allowed; }
-    .btn-secondary { width: 100%; padding: 11px; background: transparent; color: var(--text-primary); border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
-    .btn-secondary:hover { background: var(--bg-secondary); }
     .auth-error { font-size: 13px; color: var(--red); background: var(--red-light); padding: 10px 12px; border-radius: var(--radius-md); display: none; }
-    .auth-success { font-size: 13px; color: var(--green-dark); background: var(--green-light); padding: 10px 12px; border-radius: var(--radius-md); display: none; }
+    .auth-success { font-size: 13px; color: var(--green-dark); background: var(--green-light); padding: 10px 12px; border-radius: var(--radius-md); display: none; line-height: 1.6; }
 
     /* SETUP */
     .setup-wrap { flex: 1; display: flex; flex-direction: column; padding: 24px; gap: 16px; overflow-y: auto; }
@@ -119,16 +117,55 @@
     .panel-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; margin-bottom: 4px; }
     .panel-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; font-weight: 300; }
 
-    /* Location autocomplete */
+    /* Location with suggestions */
     .location-wrap { position: relative; margin-bottom: 12px; }
-    .location-wrap input { width: 100%; padding: 10px 12px; font-size: 14px; font-family: 'DM Sans', sans-serif; background: var(--bg-secondary); border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); color: var(--text-primary); outline: none; }
-    .location-wrap input:focus { border-color: var(--green); }
-    .autocomplete-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-primary); border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); z-index: 50; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-    .autocomplete-item { padding: 10px 14px; font-size: 13px; cursor: pointer; border-bottom: 0.5px solid var(--border-light); }
-    .autocomplete-item:last-child { border-bottom: none; }
-    .autocomplete-item:hover { background: var(--bg-secondary); }
-    .autocomplete-item .ac-label { font-weight: 400; }
-    .autocomplete-item .ac-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+    .location-input-row { display: flex; gap: 0; }
+    .location-input-row input {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-md) 0 0 var(--radius-md);
+      color: var(--text-primary);
+      outline: none;
+      border-right: none;
+    }
+    .location-input-row input:focus { border-color: var(--green); }
+    .location-search-btn {
+      padding: 10px 14px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .location-search-btn:hover { background: var(--green-dark); }
+
+    .location-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 5px; font-weight: 300; }
+    .location-confirmed { font-size: 12px; color: var(--green-dark); background: var(--green-light); padding: 5px 10px; border-radius: 6px; margin-top: 5px; display: none; }
+
+    .suggestions-list {
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 0; right: 0;
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      z-index: 50;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      display: none;
+    }
+    .suggestion-item { padding: 10px 14px; font-size: 13px; cursor: pointer; border-bottom: 0.5px solid var(--border-light); }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover, .suggestion-item.highlighted { background: var(--bg-secondary); }
+    .suggestion-item .s-label { font-weight: 400; color: var(--text-primary); }
 
     .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
     .field { display: flex; flex-direction: column; gap: 5px; }
@@ -153,8 +190,8 @@
 
     .card-photo { width: 100%; height: 220px; flex-shrink: 0; position: relative; overflow: hidden; background: var(--bg-secondary); }
     .card-photo img { width: 100%; height: 100%; object-fit: cover; }
-    .card-photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 56px; background: var(--bg-secondary); }
-    .type-badge { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.55); color: white; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.04em; }
+    .card-photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 56px; }
+    .type-badge { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.55); color: white; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 20px; }
     .photo-count { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; font-size: 10px; padding: 3px 8px; border-radius: 10px; }
 
     .card-body { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
@@ -176,12 +213,11 @@
     .btn-like:hover { background: var(--green-dark); }
     .kb-hint { text-align: center; font-size: 11px; color: var(--text-tertiary); padding: 0 20px 8px; font-weight: 300; }
 
-    /* Loading cards */
     .card-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; height: 100%; }
-    .card-loading-dots { display: flex; gap: 6px; }
-    .card-loading-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: dotpulse 1.2s infinite; }
-    .card-loading-dot:nth-child(2) { animation-delay: 0.2s; }
-    .card-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    .loading-dots-sm { display: flex; gap: 6px; }
+    .loading-dot-sm { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: dotpulse 1.2s infinite; }
+    .loading-dot-sm:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot-sm:nth-child(3) { animation-delay: 0.4s; }
     @keyframes dotpulse { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
 
     /* LIKED */
@@ -222,13 +258,11 @@
     .invite-row input:focus { border-color: var(--green); }
     .invite-row button { padding: 10px 14px; background: var(--green); color: white; border: none; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
     .invite-row button:hover { background: var(--green-dark); }
-    .invite-row button:disabled { background: var(--text-tertiary); cursor: not-allowed; }
     .pending-invite { font-size: 12px; color: var(--text-secondary); background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px 12px; }
-    .pending-label { font-size: 10px; color: var(--text-tertiary); margin-top: 3px; word-break: break-all; }
+    .pending-link { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; word-break: break-all; }
     .copy-btn { font-size: 11px; background: var(--bg-primary); border: 0.5px solid var(--border-mid); border-radius: 6px; padding: 3px 8px; cursor: pointer; color: var(--text-secondary); font-family: 'DM Sans', sans-serif; margin-top: 6px; display: inline-block; }
     .copy-btn:hover { color: var(--green); border-color: var(--green); }
 
-    /* EMPTY */
     .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 24px; text-align: center; }
     .empty-icon { font-size: 52px; line-height: 1; }
     .empty-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 400; }
@@ -236,11 +270,9 @@
     .empty-btn { margin-top: 8px; padding: 10px 22px; background: var(--green); color: white; border: none; border-radius: var(--radius-md); font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 500; }
     .empty-btn:hover { background: var(--green-dark); }
 
-    /* TOAST */
-    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text-primary); color: var(--bg-primary); font-size: 13px; padding: 10px 18px; border-radius: 20px; transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; pointer-events: none; white-space: nowrap; z-index: 999; max-width: 90vw; white-space: normal; text-align: center; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text-primary); color: var(--bg-primary); font-size: 13px; padding: 10px 18px; border-radius: 20px; transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; pointer-events: none; z-index: 999; max-width: 85vw; text-align: center; line-height: 1.5; }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
-    /* LOADING SCREEN */
     .loading-screen { position: fixed; inset: 0; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 200; transition: opacity 0.3s; }
     .loading-screen.hidden { opacity: 0; pointer-events: none; }
     .loading-logo { font-family: 'Playfair Display', serif; font-size: 28px; }
@@ -340,8 +372,20 @@
       <p class="panel-sub">Search live Zoopla listings</p>
 
       <div class="location-wrap">
-        <input type="text" id="location-input" placeholder="Type a location, e.g. Manchester..." autocomplete="off" oninput="onLocationInput()" />
-        <div class="autocomplete-list" id="autocomplete-list" style="display:none;"></div>
+        <div class="location-input-row">
+          <input
+            type="text"
+            id="location-input"
+            placeholder="Type a location, e.g. Manchester"
+            autocomplete="off"
+            oninput="onLocationInput(event)"
+            onkeydown="onLocationKeydown(event)"
+          />
+          <button class="location-search-btn" onclick="lookupAndSearch()">Search</button>
+        </div>
+        <div id="location-confirmed" class="location-confirmed"></div>
+        <p class="location-hint" id="location-hint">Type a town, city or postcode — suggestions will appear</p>
+        <div class="suggestions-list" id="suggestions-list"></div>
       </div>
 
       <div class="field-grid">
@@ -390,12 +434,11 @@
           </select>
         </div>
       </div>
-      <button class="btn-primary" id="search-btn" onclick="startSearch()">Search Zoopla</button>
     </div>
-    <div class="empty-state" id="search-empty">
+    <div class="empty-state">
       <div class="empty-icon">🏡</div>
       <p class="empty-title">Ready to explore</p>
-      <p class="empty-sub">Search any UK location to load real listings from Zoopla. Like the ones you love, share them with your household.</p>
+      <p class="empty-sub">Type a UK location above and hit Search to load real listings from Zoopla.</p>
     </div>
   </div>
 
@@ -416,8 +459,8 @@
       <div class="swipe-area"><div class="card-stack" id="card-stack"></div></div>
       <p class="swipe-hint">♥ like &nbsp;·&nbsp; ✕ skip</p>
       <div class="swipe-actions">
-        <button class="action-btn btn-skip" onclick="swipe('skip')" title="Skip (←)">✕</button>
-        <button class="action-btn btn-like" onclick="swipe('like')" title="Like (→)">♥</button>
+        <button class="action-btn btn-skip" onclick="swipe('skip')">✕</button>
+        <button class="action-btn btn-like" onclick="swipe('like')">♥</button>
       </div>
       <p class="kb-hint">Keyboard: → like &nbsp;·&nbsp; ← skip</p>
     </div>
@@ -449,7 +492,7 @@
         <input type="email" id="invite-email" placeholder="their@email.com" />
         <button onclick="sendInvite()" id="invite-btn">Send invite</button>
       </div>
-      <div id="invite-success" style="display:none;" class="auth-success"></div>
+      <div id="invite-success" class="auth-success" style="display:none;"></div>
       <div class="section-label" id="pending-label" style="display:none;">Pending invites</div>
       <div id="pending-list"></div>
     </div>
@@ -465,29 +508,24 @@
 
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // State
-    let currentUser = null;
-    let currentUserName = '';
-    let currentHousehold = null;
-    let householdMembers = [];
-    let likedProperties = [];
-    let likedIds = new Set();
-    let dismissedIds = new Set();
-    let queue = [];
-    let currentIndex = 0;
-    let isAnimating = false;
+    let currentUser = null, currentUserName = '';
+    let currentHousehold = null, householdMembers = [];
+    let likedProperties = [], likedIds = new Set(), dismissedIds = new Set();
+    let queue = [], currentIndex = 0, isAnimating = false;
     let authMode = 'login';
-    let selectedGeo = null; // { geoIdentifier, geoLabel }
+    let selectedGeo = null; // { geoIdentifier, geoLabel } — set when user picks from suggestions
     let acTimer = null;
+    let suggestions = [];
+    let highlightedIndex = -1;
 
-    // ── Toast ─────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────
     let toastTimer;
     function showToast(msg) {
       const t = document.getElementById('toast');
       t.textContent = msg;
       t.classList.add('show');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
     }
 
     function setSyncState(state, label) {
@@ -519,65 +557,113 @@
       if (meta) meta.textContent = likedIds.size === 0 ? 'No saved properties yet' : `${likedIds.size} propert${likedIds.size === 1 ? 'y' : 'ies'} saved by your household`;
     }
 
-    // ── Location Autocomplete ─────────────────────────────
-    async function onLocationInput() {
-      const val = document.getElementById('location-input').value.trim();
+    // ── Location input ────────────────────────────────────
+    function onLocationInput(e) {
+      const val = e.target.value.trim();
+      // Clear confirmed geo when user edits
       selectedGeo = null;
+      document.getElementById('location-confirmed').style.display = 'none';
       clearTimeout(acTimer);
-      if (val.length < 2) { hideAutocomplete(); return; }
-      acTimer = setTimeout(() => fetchAutocomplete(val), 350);
+      if (val.length < 2) { hideSuggestions(); return; }
+      acTimer = setTimeout(() => fetchSuggestions(val), 400);
     }
 
-    async function fetchAutocomplete(query) {
+    function onLocationKeydown(e) {
+      const list = document.getElementById('suggestions-list');
+      if (list.style.display === 'none') return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); highlightedIndex = Math.min(highlightedIndex + 1, suggestions.length - 1); renderHighlight(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); highlightedIndex = Math.max(highlightedIndex - 1, 0); renderHighlight(); }
+      else if (e.key === 'Enter' && highlightedIndex >= 0) { e.preventDefault(); selectSuggestion(suggestions[highlightedIndex]); }
+    }
+
+    async function fetchSuggestions(query) {
       try {
         const res = await fetch(`https://${RAPIDAPI_HOST}/auto-complete?query=${encodeURIComponent(query)}`, {
           headers: { 'x-rapidapi-key': RAPIDAPI_KEY, 'x-rapidapi-host': RAPIDAPI_HOST }
         });
+        if (!res.ok) throw new Error('autocomplete failed');
         const data = await res.json();
-        const suggestions = data?.data?.geoSuggestions || [];
-        renderAutocomplete(suggestions.slice(0, 6));
-      } catch (e) {
-        hideAutocomplete();
+        suggestions = (data?.data?.geoSuggestions || []).slice(0, 6);
+        renderSuggestions();
+      } catch {
+        // Autocomplete failed silently — user can still type freely and search
+        hideSuggestions();
       }
     }
 
-    function renderAutocomplete(suggestions) {
-      const list = document.getElementById('autocomplete-list');
-      if (!suggestions.length) { hideAutocomplete(); return; }
+    function renderSuggestions() {
+      const list = document.getElementById('suggestions-list');
+      if (!suggestions.length) { hideSuggestions(); return; }
+      highlightedIndex = -1;
       list.innerHTML = '';
-      suggestions.forEach(s => {
+      suggestions.forEach((s, i) => {
         const item = document.createElement('div');
-        item.className = 'autocomplete-item';
-        item.innerHTML = `<div class="ac-label">${s.geoLabel || s.geoIdentifier}</div>`;
-        item.onclick = () => {
-          selectedGeo = { geoIdentifier: s.geoIdentifier, geoLabel: s.geoLabel };
-          document.getElementById('location-input').value = s.geoLabel || s.geoIdentifier;
-          hideAutocomplete();
-        };
+        item.className = 'suggestion-item';
+        item.innerHTML = `<div class="s-label">${s.geoLabel || s.geoIdentifier}</div>`;
+        item.onmousedown = (e) => { e.preventDefault(); selectSuggestion(s); };
         list.appendChild(item);
       });
       list.style.display = 'block';
+      document.getElementById('location-hint').style.display = 'none';
     }
 
-    function hideAutocomplete() {
-      document.getElementById('autocomplete-list').style.display = 'none';
+    function renderHighlight() {
+      document.querySelectorAll('.suggestion-item').forEach((el, i) => {
+        el.classList.toggle('highlighted', i === highlightedIndex);
+      });
+    }
+
+    function selectSuggestion(s) {
+      selectedGeo = { geoIdentifier: s.geoIdentifier, geoLabel: s.geoLabel };
+      document.getElementById('location-input').value = s.geoLabel || s.geoIdentifier;
+      hideSuggestions();
+      const confirmed = document.getElementById('location-confirmed');
+      confirmed.textContent = `Searching in: ${s.geoLabel}`;
+      confirmed.style.display = 'block';
+    }
+
+    function hideSuggestions() {
+      document.getElementById('suggestions-list').style.display = 'none';
     }
 
     document.addEventListener('click', e => {
-      if (!e.target.closest('.location-wrap')) hideAutocomplete();
+      if (!e.target.closest('.location-wrap')) hideSuggestions();
     });
 
-    // ── Zoopla Search ─────────────────────────────────────
-    async function startSearch() {
+    // ── Search ────────────────────────────────────────────
+    async function lookupAndSearch() {
+      const inputVal = document.getElementById('location-input').value.trim();
+      if (!inputVal) { showToast('Please enter a location to search'); return; }
+
+      // If user hasn't picked from suggestions, try to look up the location first
       if (!selectedGeo) {
-        showToast('Please select a location from the dropdown');
-        document.getElementById('location-input').focus();
+        try {
+          const res = await fetch(`https://${RAPIDAPI_HOST}/auto-complete?query=${encodeURIComponent(inputVal)}`, {
+            headers: { 'x-rapidapi-key': RAPIDAPI_KEY, 'x-rapidapi-host': RAPIDAPI_HOST }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const first = (data?.data?.geoSuggestions || [])[0];
+            if (first) {
+              selectedGeo = { geoIdentifier: first.geoIdentifier, geoLabel: first.geoLabel };
+            }
+          }
+        } catch { /* fall through */ }
+      }
+
+      // If we still have no geo, we can't search — the API requires geoIdentifier
+      if (!selectedGeo) {
+        showToast('Could not find that location. Try typing more slowly and picking from the suggestions.');
         return;
       }
 
-      const btn = document.getElementById('search-btn');
+      await doSearch();
+    }
+
+    async function doSearch() {
+      const btn = document.querySelector('.location-search-btn');
+      btn.textContent = 'Searching...';
       btn.disabled = true;
-      btn.textContent = 'Searching Zoopla...';
 
       switchTab('swipe');
       showLoadingCards();
@@ -604,90 +690,78 @@
           headers: { 'x-rapidapi-key': RAPIDAPI_KEY, 'x-rapidapi-host': RAPIDAPI_HOST }
         });
 
-        if (!res.ok) throw new Error(`API error ${res.status}`);
+        if (!res.ok) throw new Error(`API ${res.status}`);
         const data = await res.json();
 
         const listings = data?.data?.listings || data?.listings || [];
 
         if (!listings.length) {
-          showToast('No properties found — try adjusting your search');
+          showToast('No properties found — try adjusting your search criteria');
           switchTab('search');
-          btn.disabled = false;
-          btn.textContent = 'Search Zoopla';
+          btn.textContent = 'Search'; btn.disabled = false;
           return;
         }
 
-        // Normalise listings and filter already seen
-        queue = listings
-          .map(normalise)
-          .filter(p => p && !dismissedIds.has(p.id) && !likedIds.has(p.id));
-
+        queue = listings.map(normalise).filter(p => p && !dismissedIds.has(p.id) && !likedIds.has(p.id));
         currentIndex = 0;
         document.getElementById('swipe-location-label').textContent = selectedGeo.geoLabel;
         renderCards();
 
       } catch (err) {
         console.error(err);
-        showToast('Could not load listings — please try again');
+        showToast('Search failed — please check your connection and try again');
         switchTab('search');
       }
 
-      btn.disabled = false;
-      btn.textContent = 'Search Zoopla';
+      btn.textContent = 'Search'; btn.disabled = false;
     }
 
     function normalise(l) {
       try {
-        const id = l.listingId || l.id || Math.random().toString(36).slice(2);
-        const price = l.price?.displayPrice || l.price?.value
-          ? `£${Number(l.price.value || l.price).toLocaleString()}`
-          : l.displayPrice || 'Price on request';
-        const address = [l.address?.displayAddress, l.address?.postcode].filter(Boolean).join(', ') || l.displayAddress || 'Address unavailable';
+        const id = String(l.listingId || l.id || Math.random().toString(36).slice(2));
+        const priceVal = l.price?.value || l.price;
+        const price = l.price?.displayPrice || (priceVal ? `£${Number(priceVal).toLocaleString()}` : 'Price on request');
+        const address = l.address?.displayAddress || l.displayAddress || [l.address?.street, l.address?.postcode].filter(Boolean).join(', ') || 'Address unavailable';
         const type = l.propertyType || l.property_type || '';
-        const beds = l.bedrooms || l.beds || 0;
-        const baths = l.bathrooms || l.baths || 0;
+        const beds = l.bedrooms ?? l.beds ?? 0;
+        const baths = l.bathrooms ?? l.baths ?? 0;
         const sqft = l.floorArea?.value || l.floorAreaSqFt || null;
         const desc = l.description || l.summary || '';
-        const photos = (l.images || l.photos || []).map(i => i.url || i.src || i).filter(Boolean);
+        const photos = (l.images || l.photos || []).map(i => typeof i === 'string' ? i : i.url || i.src).filter(Boolean);
         const thumb = photos[0] || null;
         const agent = l.agent?.name || l.branchName || '';
-        const url = l.detailUrl ? `https://www.zoopla.co.uk${l.detailUrl}` : null;
-        const garden = (desc + ' ' + (l.features || []).join(' ')).toLowerCase().includes('garden');
-
-        return { id, price, address, type, beds, baths, sqft, desc, photos, thumb, agent, url, garden, raw: l };
+        const url = l.detailUrl ? `https://www.zoopla.co.uk${l.detailUrl}` : (l.listingUrl || null);
+        const garden = (desc + ' ' + (Array.isArray(l.features) ? l.features.join(' ') : '')).toLowerCase().includes('garden');
+        return { id, price, address, type, beds, baths, sqft, desc, photos, thumb, agent, url, garden };
       } catch { return null; }
     }
 
     function showLoadingCards() {
       document.getElementById('swipe-empty').style.display = 'none';
       document.getElementById('swipe-active').style.display = 'flex';
-      document.getElementById('swipe-counter').textContent = 'Loading listings...';
+      document.getElementById('swipe-counter').textContent = 'Searching Zoopla...';
       document.getElementById('progress-fill').style.width = '0%';
-      const stack = document.getElementById('card-stack');
-      stack.innerHTML = `<div class="prop-card top" style="display:flex;align-items:center;justify-content:center;">
-        <div class="card-loading">
-          <div style="font-size:36px;">🏠</div>
-          <div style="font-size:14px;color:var(--text-secondary);font-weight:300;">Loading Zoopla listings...</div>
-          <div class="card-loading-dots">
-            <div class="card-loading-dot"></div>
-            <div class="card-loading-dot"></div>
-            <div class="card-loading-dot"></div>
+      document.getElementById('card-stack').innerHTML = `
+        <div class="prop-card top" style="display:flex;align-items:center;justify-content:center;">
+          <div class="card-loading">
+            <div style="font-size:40px;">🏠</div>
+            <div style="font-size:13px;color:var(--text-secondary);font-weight:300;">Loading Zoopla listings...</div>
+            <div class="loading-dots-sm">
+              <div class="loading-dot-sm"></div><div class="loading-dot-sm"></div><div class="loading-dot-sm"></div>
+            </div>
           </div>
-        </div>
-      </div>`;
+        </div>`;
     }
 
     function renderCards() {
       const stack = document.getElementById('card-stack');
       stack.innerHTML = '';
       const remaining = queue.length - currentIndex;
-
       if (remaining === 0) {
         document.getElementById('swipe-empty').style.display = 'flex';
         document.getElementById('swipe-active').style.display = 'none';
         return;
       }
-
       document.getElementById('swipe-empty').style.display = 'none';
       document.getElementById('swipe-active').style.display = 'flex';
       document.getElementById('swipe-counter').textContent = `${remaining} propert${remaining === 1 ? 'y' : 'ies'} remaining`;
@@ -699,18 +773,14 @@
         const offset = i - currentIndex;
         const card = document.createElement('div');
         card.className = 'prop-card ' + (offset === 0 ? 'top' : offset === 1 ? 'behind-1' : 'behind-2');
-
         const photoHtml = prop.thumb
-          ? `<img src="${prop.thumb}" alt="${prop.address}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'card-photo-placeholder\\'>🏠</div>'" />`
+          ? `<img src="${prop.thumb}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.querySelector('.card-photo-placeholder').style.display='flex'" /><div class="card-photo-placeholder" style="display:none;position:absolute;inset:0;">🏠</div>`
           : `<div class="card-photo-placeholder">🏠</div>`;
-
-        const photoCount = prop.photos?.length > 1 ? `<span class="photo-count">${prop.photos.length} photos</span>` : '';
-
         card.innerHTML = `
           <div class="card-photo">
             ${photoHtml}
             ${prop.type ? `<span class="type-badge">${prop.type}</span>` : ''}
-            ${photoCount}
+            ${prop.photos?.length > 1 ? `<span class="photo-count">${prop.photos.length} photos</span>` : ''}
           </div>
           <div class="card-body">
             <div class="card-price">${prop.price}</div>
@@ -723,8 +793,7 @@
             </div>
             ${prop.desc ? `<div class="card-desc">${prop.desc}</div>` : ''}
             ${prop.agent ? `<div class="card-agent">${prop.agent}</div>` : ''}
-          </div>
-        `;
+          </div>`;
         stack.appendChild(card);
       }
     }
@@ -735,16 +804,8 @@
       const prop = queue[currentIndex];
       const topCard = document.querySelector('.prop-card.top');
       if (!topCard) { isAnimating = false; return; }
-
-      if (action === 'like') {
-        topCard.classList.add('fly-right');
-        saveLiked(prop);
-        showToast('Saved for the household ♥');
-      } else {
-        topCard.classList.add('fly-left');
-        saveDismissed(prop.id);
-      }
-
+      if (action === 'like') { topCard.classList.add('fly-right'); saveLiked(prop); showToast('Saved for the household ♥'); }
+      else { topCard.classList.add('fly-left'); saveDismissed(prop.id); }
       setTimeout(() => { currentIndex++; isAnimating = false; renderCards(); }, 360);
     }
 
@@ -765,8 +826,7 @@
       const errEl = document.getElementById('auth-error');
       const successEl = document.getElementById('auth-success');
       const btn = document.getElementById('auth-btn');
-      errEl.style.display = 'none';
-      successEl.style.display = 'none';
+      errEl.style.display = 'none'; successEl.style.display = 'none';
       if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
       if (authMode === 'signup' && !name) { errEl.textContent = 'Please enter your name.'; errEl.style.display = 'block'; return; }
       btn.disabled = true;
@@ -811,7 +871,7 @@
       showNav();
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('view-search').classList.add('active');
-      showToast('Household created!');
+      showToast('Household created! Start searching.');
     }
 
     async function joinViaToken() {
@@ -842,7 +902,7 @@
       if (error) { showToast('Error sending invite'); }
       else {
         const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${invite.token}`;
-        successEl.innerHTML = `Invite created for <strong>${email}</strong>. Share this link with them:<br><br><a href="${inviteLink}" style="color:var(--green);word-break:break-all;">${inviteLink}</a>`;
+        successEl.innerHTML = `Invite created for <strong>${email}</strong>.<br><br>Share this link:<br><a href="${inviteLink}" style="color:var(--green);word-break:break-all;">${inviteLink}</a>`;
         successEl.style.display = 'block';
         document.getElementById('invite-email').value = '';
         renderHousehold();
@@ -875,12 +935,9 @@
       setSyncState('syncing', 'saving');
       try {
         await sb.from('liked_properties').upsert({
-          household_id: currentHousehold.id,
-          session_id: currentUser.id,
-          property_id: prop.id,
-          property_data: prop,
-          liked_by_user_id: currentUser.id,
-          liked_by_name: currentUserName
+          household_id: currentHousehold.id, session_id: currentUser.id,
+          property_id: prop.id, property_data: prop,
+          liked_by_user_id: currentUser.id, liked_by_name: currentUserName
         }, { onConflict: 'session_id,property_id' });
         setSyncState('ok', 'synced');
       } catch { setSyncState('error', 'offline'); }
@@ -908,7 +965,6 @@
       renderLiked();
     }
 
-    // ── Render ────────────────────────────────────────────
     function renderLiked() {
       const grid = document.getElementById('liked-grid');
       grid.innerHTML = '';
@@ -920,9 +976,7 @@
       likedProperties.forEach(prop => {
         const card = document.createElement('div');
         card.className = 'liked-card';
-        const thumbHtml = prop.thumb
-          ? `<img src="${prop.thumb}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='🏠'" />`
-          : '🏠';
+        const thumbHtml = prop.thumb ? `<img src="${prop.thumb}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='🏠'" />` : '🏠';
         card.innerHTML = `
           <div class="liked-thumb">${thumbHtml}</div>
           <div class="liked-info">
@@ -936,8 +990,7 @@
             ${prop.likedByName ? `<div class="liked-by">♥ ${prop.likedByName}</div>` : ''}
             ${prop.url ? `<a href="${prop.url}" target="_blank" class="liked-link">View on Zoopla →</a>` : ''}
           </div>
-          <button class="liked-remove" onclick="removeLiked('${prop.id}')" title="Remove">✕</button>
-        `;
+          <button class="liked-remove" onclick="removeLiked('${prop.id}')" title="Remove">✕</button>`;
         grid.appendChild(card);
       });
     }
@@ -954,15 +1007,10 @@
         const initials = (m.display_name || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
         const div = document.createElement('div');
         div.className = 'member-row';
-        div.innerHTML = `
-          <div class="member-avatar">${initials}</div>
-          <div><span class="member-name">${m.display_name}</span>${isYou ? '<span class="member-you">(you)</span>' : ''}</div>
-          ${isOwner ? '<span class="member-owner">owner</span>' : ''}
-        `;
+        div.innerHTML = `<div class="member-avatar">${initials}</div><div><span class="member-name">${m.display_name}</span>${isYou ? '<span class="member-you">(you)</span>' : ''}</div>${isOwner ? '<span class="member-owner">owner</span>' : ''}`;
         memberList.appendChild(div);
       });
-
-      const { data: pending } = await sb.from('household_invites').select('invited_email, token, created_at').eq('household_id', currentHousehold.id).eq('accepted', false);
+      const { data: pending } = await sb.from('household_invites').select('invited_email, token').eq('household_id', currentHousehold.id).eq('accepted', false);
       const pendingList = document.getElementById('pending-list');
       const pendingLabel = document.getElementById('pending-label');
       pendingList.innerHTML = '';
@@ -972,11 +1020,7 @@
           const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${inv.token}`;
           const div = document.createElement('div');
           div.className = 'pending-invite';
-          div.innerHTML = `
-            <div style="font-weight:400;">${inv.invited_email}</div>
-            <div class="pending-label">${inviteLink}</div>
-            <button class="copy-btn" onclick="copyLink('${inviteLink}', this)">Copy link</button>
-          `;
+          div.innerHTML = `<div style="font-weight:400;">${inv.invited_email}</div><div class="pending-link">${inviteLink}</div><button class="copy-btn" onclick="copyLink('${inviteLink}', this)">Copy link</button>`;
           pendingList.appendChild(div);
         });
       } else { pendingLabel.style.display = 'none'; }
@@ -987,15 +1031,11 @@
     }
 
     // ── Boot ──────────────────────────────────────────────
-    function getInviteTokenFromURL() {
-      return new URLSearchParams(window.location.search).get('invite');
-    }
-
     sb.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         currentUser = session.user;
         currentUserName = currentUser.user_metadata?.display_name || currentUser.email.split('@')[0];
-        const urlToken = getInviteTokenFromURL();
+        const urlToken = new URLSearchParams(window.location.search).get('invite');
         if (urlToken) document.getElementById('invite-token-input').value = urlToken;
         const hh = await loadHousehold();
         hideLoading();
