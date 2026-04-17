@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nest.find — Property Search</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f3;
+      --bg-tertiary: #efede8;
+      --text-primary: #1a1a18;
+      --text-secondary: #6b6b67;
+      --text-tertiary: #a0a09c;
+      --border-light: rgba(0,0,0,0.1);
+      --border-mid: rgba(0,0,0,0.18);
+      --green: #1D9E75;
+      --green-dark: #0F6E56;
+      --green-light: #E1F5EE;
+      --red: #E24B4A;
+      --red-light: #FCEBEB;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1e1e1c;
+        --bg-secondary: #2a2a27;
+        --bg-tertiary: #161614;
+        --text-primary: #f0ede6;
+        --text-secondary: #a0a09c;
+        --text-tertiary: #6b6b67;
+        --border-light: rgba(255,255,255,0.08);
+        --border-mid: rgba(255,255,255,0.15);
+        --green-light: #0a3d2b;
+        --red-light: #3d1414;
+      }
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── NAV ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      background: var(--bg-primary);
+      border-bottom: 0.5px solid var(--border-light);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 400; letter-spacing: 0.02em; }
+    .logo span { color: var(--green); }
+
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+
+    .sync-indicator { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-tertiary); }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-tertiary); transition: background 0.3s; }
+    .sync-dot.ok { background: var(--green); }
+    .sync-dot.syncing { background: #EF9F27; animation: pulse 1s infinite; }
+    .sync-dot.error { background: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .tabs { display: flex; gap: 3px; background: var(--bg-secondary); padding: 4px; border-radius: var(--radius-md); }
+    .tab { padding: 6px 12px; font-size: 13px; font-weight: 400; border: none; background: transparent; color: var(--text-secondary); border-radius: 6px; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+    .tab.active { background: var(--bg-primary); color: var(--text-primary); font-weight: 500; border: 0.5px solid var(--border-light); }
+    .badge { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; background: var(--green); color: white; font-size: 10px; font-weight: 500; border-radius: 50%; margin-left: 4px; vertical-align: middle; }
+
+    /* ── VIEWS ── */
+    .view { display: none; flex: 1; flex-direction: column; }
+    .view.active { display: flex; }
+
+    /* ── AUTH SCREEN ── */
+    .auth-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      gap: 24px;
+    }
+
+    .auth-logo { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 400; text-align: center; }
+    .auth-logo span { color: var(--green); }
+    .auth-tagline { font-size: 14px; color: var(--text-secondary); font-weight: 300; text-align: center; margin-top: -16px; }
+
+    .auth-card {
+      width: 100%;
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .auth-tabs { display: flex; gap: 0; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 4px; }
+    .auth-tab { flex: 1; padding: 9px; font-size: 13px; font-weight: 400; border: none; background: transparent; color: var(--text-secondary); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+    .auth-tab.active { background: var(--green); color: white; font-weight: 500; }
+
+    .field-col { display: flex; flex-direction: column; gap: 5px; }
+    .field-col label { font-size: 11px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.07em; text-transform: uppercase; }
+    .field-col input {
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      outline: none;
+    }
+    .field-col input:focus { border-color: var(--green); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--green-dark); }
+    .btn-primary:disabled { background: var(--text-tertiary); cursor: not-allowed; }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 11px;
+      background: transparent;
+      color: var(--text-primary);
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 400;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.15s;
+    }
+    .btn-secondary:hover { background: var(--bg-secondary); }
+
+    .auth-error { font-size: 13px; color: var(--red); background: var(--red-light); padding: 10px 12px; border-radius: var(--radius-md); display: none; }
+    .auth-success { font-size: 13px; color: var(--green-dark); background: var(--green-light); padding: 10px 12px; border-radius: var(--radius-md); display: none; }
+
+    /* ── HOUSEHOLD SETUP ── */
+    .setup-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 16px;
+    }
+
+    .setup-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; }
+    .setup-sub { font-size: 13px; color: var(--text-secondary); font-weight: 300; line-height: 1.6; margin-top: -8px; }
+
+    .setup-card {
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .setup-card-title { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+    .setup-card-sub { font-size: 12px; color: var(--text-secondary); font-weight: 300; margin-top: -8px; }
+
+    .divider { display: flex; align-items: center; gap: 12px; color: var(--text-tertiary); font-size: 12px; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 0.5px; background: var(--border-light); }
+
+    /* ── SEARCH VIEW ── */
+    .search-panel { padding: 24px 20px 20px; background: var(--bg-primary); border-bottom: 0.5px solid var(--border-light); }
+    .panel-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 400; margin-bottom: 4px; }
+    .panel-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; font-weight: 300; }
+
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 11px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase; }
+    .field select {
+      padding: 9px 28px 9px 10px;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6b67' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    .field select:focus { border-color: var(--green); }
+
+    /* ── SWIPE ── */
+    .swipe-meta { padding: 12px 20px 0; display: flex; align-items: center; justify-content: space-between; }
+    .swipe-meta span { font-size: 12px; color: var(--text-secondary); font-weight: 300; }
+    .progress-bar { height: 3px; background: var(--bg-secondary); margin: 8px 20px 0; border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.4s ease; }
+
+    .swipe-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px 20px; }
+    .card-stack { position: relative; width: 100%; max-width: 380px; height: 460px; }
+
+    .prop-card {
+      position: absolute; inset: 0;
+      background: var(--bg-primary);
+      border-radius: 16px;
+      border: 0.5px solid var(--border-light);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.35s ease, opacity 0.35s ease;
+      user-select: none;
+    }
+    .prop-card.top { z-index: 3; }
+    .prop-card.behind-1 { transform: translateY(8px) scale(0.97); z-index: 2; pointer-events: none; }
+    .prop-card.behind-2 { transform: translateY(16px) scale(0.94); z-index: 1; pointer-events: none; }
+    .prop-card.fly-left { transform: translateX(-150%) rotate(-16deg); opacity: 0; }
+    .prop-card.fly-right { transform: translateX(150%) rotate(16deg); opacity: 0; }
+
+    .card-photo { width: 100%; height: 220px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; }
+    .card-photo-emoji { font-size: 60px; line-height: 1; }
+    .type-badge { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.5); color: white; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.04em; }
+
+    .card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 7px; overflow: hidden; }
+    .card-price { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 500; }
+    .card-address { font-size: 13px; color: var(--text-secondary); font-weight: 300; }
+    .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+    .card-tag { font-size: 11px; padding: 3px 9px; border-radius: 20px; background: var(--bg-secondary); color: var(--text-secondary); border: 0.5px solid var(--border-light); }
+    .card-tag.green { background: var(--green-light); color: var(--green-dark); border-color: #9FE1CB; }
+    .card-desc { font-size: 12px; color: var(--text-secondary); font-weight: 300; line-height: 1.65; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+
+    .swipe-hint { text-align: center; font-size: 12px; color: var(--text-tertiary); font-weight: 300; padding: 0 20px 4px; }
+    .swipe-actions { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 12px 20px 28px; }
+    .action-btn { display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: transform 0.15s, background 0.15s; font-family: 'DM Sans', sans-serif; }
+    .action-btn:active { transform: scale(0.91); }
+    .btn-skip { width: 58px; height: 58px; border-radius: 50%; background: var(--bg-primary); border: 1.5px solid var(--red); color: var(--red); font-size: 22px; }
+    .btn-skip:hover { background: var(--red-light); }
+    .btn-like { width: 70px; height: 70px; border-radius: 50%; background: var(--green); border: none; color: white; font-size: 28px; box-shadow: 0 4px 20px rgba(29,158,117,0.3); }
+    .btn-like:hover { background: var(--green-dark); }
+    .kb-hint { text-align: center; font-size: 11px; color: var(--text-tertiary); padding: 0 20px 10px; font-weight: 300; }
+
+    /* ── LIKED VIEW ── */
+    .liked-header { padding: 16px 20px 12px; background: var(--bg-primary); border-bottom: 0.5px solid var(--border-light); }
+    .liked-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 400; }
+    .liked-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; font-weight: 300; }
+
+    .liked-grid { padding: 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; }
+
+    .liked-card { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); display: flex; gap: 12px; padding: 12px; align-items: flex-start; }
+    .liked-thumb { width: 68px; height: 68px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+    .liked-info { flex: 1; min-width: 0; }
+    .liked-price { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 500; }
+    .liked-addr { font-size: 12px; color: var(--text-secondary); margin-top: 2px; font-weight: 300; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .liked-tags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+    .liked-tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: var(--bg-secondary); color: var(--text-secondary); border: 0.5px solid var(--border-light); }
+    .liked-by { font-size: 11px; color: var(--green-dark); background: var(--green-light); padding: 2px 8px; border-radius: 20px; border: 0.5px solid #9FE1CB; display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; }
+    .liked-remove { background: none; border: none; cursor: pointer; color: var(--text-tertiary); font-size: 16px; padding: 2px; line-height: 1; flex-shrink: 0; transition: color 0.15s; }
+    .liked-remove:hover { color: var(--red); }
+
+    /* ── HOUSEHOLD VIEW ── */
+    .household-header { padding: 16px 20px 12px; background: var(--bg-primary); border-bottom: 0.5px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; }
+    .household-name { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 400; }
+    .household-meta { font-size: 12px; color: var(--text-secondary); font-weight: 300; margin-top: 2px; }
+    .sign-out-btn { font-size: 12px; color: var(--text-secondary); background: none; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); padding: 5px 10px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .sign-out-btn:hover { color: var(--red); border-color: var(--red); }
+
+    .household-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; flex: 1; }
+
+    .section-label { font-size: 11px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: -4px; }
+
+    .member-list { display: flex; flex-direction: column; gap: 8px; }
+    .member-row { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-md); padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+    .member-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; color: var(--green-dark); flex-shrink: 0; }
+    .member-name { font-size: 13px; font-weight: 400; }
+    .member-you { font-size: 11px; color: var(--text-tertiary); font-weight: 300; margin-left: 4px; }
+    .member-owner { font-size: 10px; background: var(--bg-secondary); color: var(--text-secondary); padding: 2px 7px; border-radius: 10px; border: 0.5px solid var(--border-light); margin-left: auto; }
+
+    .invite-row { display: flex; gap: 8px; }
+    .invite-row input { flex: 1; padding: 10px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg-secondary); border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); color: var(--text-primary); outline: none; }
+    .invite-row input:focus { border-color: var(--green); }
+    .invite-row button { padding: 10px 16px; background: var(--green); color: white; border: none; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+    .invite-row button:hover { background: var(--green-dark); }
+    .invite-row button:disabled { background: var(--text-tertiary); cursor: not-allowed; }
+
+    .pending-invite { font-size: 12px; color: var(--text-secondary); background: var(--bg-secondary); border-radius: var(--radius-md); padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; }
+    .pending-label { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 40px 24px; text-align: center; }
+    .empty-icon { font-size: 52px; line-height: 1; }
+    .empty-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 400; }
+    .empty-sub { font-size: 13px; color: var(--text-secondary); max-width: 260px; line-height: 1.7; font-weight: 300; }
+    .empty-btn { margin-top: 8px; padding: 10px 22px; background: var(--green); color: white; border: none; border-radius: var(--radius-md); font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 500; }
+    .empty-btn:hover { background: var(--green-dark); }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text-primary); color: var(--bg-primary); font-size: 13px; padding: 10px 18px; border-radius: 20px; transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; pointer-events: none; white-space: nowrap; z-index: 999; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ── LOADING ── */
+    .loading-screen { position: fixed; inset: 0; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 200; transition: opacity 0.3s; }
+    .loading-screen.hidden { opacity: 0; pointer-events: none; }
+    .loading-logo { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--text-primary); }
+    .loading-logo span { color: var(--green); }
+    .loading-dots { display: flex; gap: 6px; }
+    .loading-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: dotpulse 1.2s infinite; }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotpulse { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+  </style>
+</head>
+<body>
+
+  <!-- LOADING -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-logo">nest<span>.</span>find</div>
+    <div class="loading-dots">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+  </div>
+
+  <!-- NAV (hidden until logged in) -->
+  <nav id="main-nav" style="display:none;">
+    <span class="logo">nest<span>.</span>find</span>
+    <div class="nav-right">
+      <div class="sync-indicator">
+        <div class="sync-dot ok" id="sync-dot"></div>
+        <span id="sync-label">synced</span>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('search')">Search</button>
+        <button class="tab" onclick="switchTab('swipe')">Browse</button>
+        <button class="tab" onclick="switchTab('liked')">Saved <span class="badge" id="liked-count" style="display:none">0</span></button>
+        <button class="tab" onclick="switchTab('household')">Home</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- AUTH VIEW -->
+  <div id="view-auth" class="view active">
+    <div class="auth-wrap">
+      <div>
+        <div class="auth-logo">nest<span>.</span>find</div>
+        <p class="auth-tagline">Find your home together</p>
+      </div>
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" onclick="setAuthMode('login')">Sign in</button>
+          <button class="auth-tab" onclick="setAuthMode('signup')">Create account</button>
+        </div>
+        <div id="signup-name-field" class="field-col" style="display:none;">
+          <label>Your name</label>
+          <input type="text" id="auth-name" placeholder="e.g. Sarah" />
+        </div>
+        <div class="field-col">
+          <label>Email</label>
+          <input type="email" id="auth-email" placeholder="you@example.com" />
+        </div>
+        <div class="field-col">
+          <label>Password</label>
+          <input type="password" id="auth-password" placeholder="••••••••" />
+        </div>
+        <div class="auth-error" id="auth-error"></div>
+        <div class="auth-success" id="auth-success"></div>
+        <button class="btn-primary" id="auth-btn" onclick="handleAuth()">Sign in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOUSEHOLD SETUP VIEW -->
+  <div id="view-setup" class="view">
+    <div class="setup-wrap">
+      <h2 class="setup-title">Welcome! 👋</h2>
+      <p class="setup-sub">Create a household to start saving properties. You can invite others to join your household and share your saved list.</p>
+
+      <div class="setup-card">
+        <div class="setup-card-title">Create a new household</div>
+        <div class="setup-card-sub">You'll be the owner and can invite others</div>
+        <div class="field-col">
+          <label>Household name</label>
+          <input type="text" id="household-name-input" placeholder="e.g. The Smiths' search" />
+        </div>
+        <button class="btn-primary" onclick="createHousehold()">Create household</button>
+      </div>
+
+      <div class="divider">or</div>
+
+      <div class="setup-card">
+        <div class="setup-card-title">Join via invite</div>
+        <div class="setup-card-sub">Paste the invite link you received</div>
+        <div class="field-col">
+          <label>Invite token</label>
+          <input type="text" id="invite-token-input" placeholder="Paste invite token here" />
+        </div>
+        <button class="btn-primary" onclick="joinViaToken()">Join household</button>
+        <div class="auth-error" id="setup-error"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH VIEW -->
+  <div id="view-search" class="view">
+    <div class="search-panel">
+      <h1 class="panel-title">Find your next home</h1>
+      <p class="panel-sub">Set your criteria and browse matching properties</p>
+      <div class="field-grid">
+        <div class="field">
+          <label>Location</label>
+          <select id="s-location">
+            <option>London</option><option>Manchester</option>
+            <option>Bristol</option><option>Edinburgh</option><option>Brighton</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Property type</label>
+          <select id="s-type">
+            <option>Any</option><option>House</option>
+            <option>Flat</option><option>Terraced</option><option>Detached</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Min bedrooms</label>
+          <select id="s-beds">
+            <option>Any</option><option>1+</option>
+            <option>2+</option><option>3+</option><option>4+</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Max price</label>
+          <select id="s-price">
+            <option>£500,000</option><option>£400,000</option>
+            <option>£600,000</option><option>£750,000</option><option>No limit</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="startSearch()">Find Properties</button>
+    </div>
+    <div class="empty-state">
+      <div class="empty-icon">🏡</div>
+      <p class="empty-title">Ready to explore</p>
+      <p class="empty-sub">Set your criteria above and start browsing. Likes are shared with your whole household.</p>
+    </div>
+  </div>
+
+  <!-- SWIPE VIEW -->
+  <div id="view-swipe" class="view">
+    <div id="swipe-empty" class="empty-state" style="display:none;">
+      <div class="empty-icon">✓</div>
+      <p class="empty-title">All caught up!</p>
+      <p class="empty-sub">You've seen all properties for this search. Try a new search to find more.</p>
+      <button class="empty-btn" onclick="switchTab('search')">New Search</button>
+    </div>
+    <div id="swipe-active" style="display:flex;flex-direction:column;flex:1;">
+      <div class="swipe-meta">
+        <span id="swipe-counter"></span>
+        <span id="swipe-location"></span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="swipe-area">
+        <div class="card-stack" id="card-stack"></div>
+      </div>
+      <p class="swipe-hint">♥ like &nbsp;·&nbsp; ✕ skip</p>
+      <div class="swipe-actions">
+        <button class="action-btn btn-skip" onclick="swipe('skip')" title="Skip (←)">✕</button>
+        <button class="action-btn btn-like" onclick="swipe('like')" title="Like (→)">♥</button>
+      </div>
+      <p class="kb-hint">Keyboard: → like &nbsp;·&nbsp; ← skip</p>
+    </div>
+  </div>
+
+  <!-- LIKED VIEW -->
+  <div id="view-liked" class="view">
+    <div class="liked-header">
+      <div class="liked-title">Saved properties</div>
+      <div class="liked-meta" id="liked-meta">Loading...</div>
+    </div>
+    <div class="liked-grid" id="liked-grid"></div>
+  </div>
+
+  <!-- HOUSEHOLD VIEW -->
+  <div id="view-household" class="view">
+    <div class="household-header">
+      <div>
+        <div class="household-name" id="hh-name-display">My Household</div>
+        <div class="household-meta" id="hh-meta-display"></div>
+      </div>
+      <button class="sign-out-btn" onclick="signOut()">Sign out</button>
+    </div>
+    <div class="household-body">
+      <div class="section-label">Members</div>
+      <div class="member-list" id="member-list"></div>
+
+      <div class="section-label">Invite someone</div>
+      <div class="invite-row">
+        <input type="email" id="invite-email" placeholder="their@email.com" />
+        <button onclick="sendInvite()" id="invite-btn">Send invite</button>
+      </div>
+      <div id="invite-success" style="display:none;" class="auth-success">Invite sent! They'll receive an email with a link to join.</div>
+
+      <div class="section-label" id="pending-label" style="display:none;">Pending invites</div>
+      <div id="pending-list"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const SUPABASE_URL = 'https://zfgrpnzgvzohjddaxntg.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_EfZGdOPHvDnNQEjeDUGeDQ_NNg46SBl';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const PROPERTIES = [
+      { id:1, price:'£425,000', address:'14 Chestnut Grove, Balham', type:'Terraced House', beds:3, baths:1, sqft:1050, garden:true, desc:'Victorian terrace with period features, bay windows and a sunny south-facing garden.', emoji:'🏠', bg:'#E1F5EE' },
+      { id:2, price:'£289,000', address:'Flat 7, Merchant Quarter, Manchester', type:'Apartment', beds:2, baths:1, sqft:720, garden:false, desc:'Contemporary city-centre flat with floor-to-ceiling windows and concierge.', emoji:'🏢', bg:'#E6F1FB' },
+      { id:3, price:'£550,000', address:'3 Birch Lane, Chorlton', type:'Detached House', beds:4, baths:2, sqft:1800, garden:true, desc:'Spacious family home on a quiet cul-de-sac. Open-plan kitchen-diner and double garage.', emoji:'🏡', bg:'#EAF3DE' },
+      { id:4, price:'£195,000', address:'Flat 2A, The Granary, Bristol', type:'Apartment', beds:1, baths:1, sqft:490, garden:false, desc:'Converted warehouse apartment with exposed brick and private balcony over the harbour.', emoji:'🏗', bg:'#FAEEDA' },
+      { id:5, price:'£675,000', address:'22 Crescent Road, Hove', type:'Semi-detached', beds:4, baths:2, sqft:1650, garden:true, desc:'Edwardian semi with original fireplaces, loft conversion. 15 mins from the beach.', emoji:'🏘', bg:'#FAECE7' },
+      { id:6, price:'£340,000', address:'9 Portobello High St, Edinburgh', type:'Flat', beds:2, baths:1, sqft:810, garden:false, desc:'Bright top-floor flat in a B-listed tenement with views over the Firth of Forth.', emoji:'🏛', bg:'#FBEAF0' },
+      { id:7, price:'£465,000', address:'17 Elm Avenue, Didsbury', type:'Terraced House', beds:3, baths:2, sqft:1120, garden:true, desc:'Fully renovated 1930s home. Bespoke kitchen and bi-fold doors to the garden.', emoji:'🏠', bg:'#E1F5EE' },
+      { id:8, price:'£222,000', address:'Flat 12, Central Point, Bristol', type:'Apartment', beds:2, baths:1, sqft:680, garden:false, desc:'Modern apartment in BS1. Gym, bike storage and 24hr concierge included.', emoji:'🏢', bg:'#E6F1FB' },
+      { id:9, price:'£390,000', address:'8 Maple Street, Jesmond', type:'Terraced House', beds:3, baths:1, sqft:980, garden:true, desc:'Charming Victorian terrace. Period cornicing, original floors, private courtyard garden.', emoji:'🏠', bg:'#EAF3DE' },
+      { id:10, price:'£510,000', address:'2 Park View, Clifton', type:'Semi-detached', beds:3, baths:2, sqft:1300, garden:true, desc:'Stylish semi with views over Clifton Downs. Contemporary kitchen, landscaped garden.', emoji:'🏘', bg:'#FAEEDA' },
+    ];
+
+    // State
+    let currentUser = null;
+    let currentUserName = '';
+    let currentHousehold = null;
+    let householdMembers = [];
+    let likedProperties = [];
+    let likedIds = new Set();
+    let dismissedIds = new Set();
+    let queue = [];
+    let currentIndex = 0;
+    let isAnimating = false;
+    let authMode = 'login';
+
+    // ── Helpers ──────────────────────────────────────────
+
+    let toastTimer;
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    function setSyncState(state, label) {
+      const dot = document.getElementById('sync-dot');
+      if (!dot) return;
+      dot.className = 'sync-dot ' + state;
+      document.getElementById('sync-label').textContent = label || state;
+    }
+
+    function hideLoading() {
+      document.getElementById('loading-screen').classList.add('hidden');
+    }
+
+    function showNav() {
+      document.getElementById('main-nav').style.display = 'flex';
+    }
+
+    function hideNav() {
+      document.getElementById('main-nav').style.display = 'none';
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('view-' + tab).classList.add('active');
+      const idx = { search:0, swipe:1, liked:2, household:3 }[tab];
+      document.querySelectorAll('.tab')[idx].classList.add('active');
+      if (tab === 'liked') renderLiked();
+      if (tab === 'household') renderHousehold();
+    }
+
+    function updateBadge() {
+      const el = document.getElementById('liked-count');
+      if (!el) return;
+      el.textContent = likedIds.size;
+      el.style.display = likedIds.size > 0 ? 'inline-flex' : 'none';
+      const meta = document.getElementById('liked-meta');
+      if (meta) meta.textContent = likedIds.size === 0
+        ? 'No saved properties yet'
+        : `${likedIds.size} propert${likedIds.size === 1 ? 'y' : 'ies'} saved by your household`;
+    }
+
+    // ── Auth ──────────────────────────────────────────────
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      document.querySelectorAll('.auth-tab').forEach((t, i) => t.classList.toggle('active', i === (mode === 'login' ? 0 : 1)));
+      document.getElementById('signup-name-field').style.display = mode === 'signup' ? 'flex' : 'none';
+      document.getElementById('auth-btn').textContent = mode === 'login' ? 'Sign in' : 'Create account';
+      document.getElementById('auth-error').style.display = 'none';
+      document.getElementById('auth-success').style.display = 'none';
+    }
+
+    async function handleAuth() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const name = document.getElementById('auth-name').value.trim();
+      const errEl = document.getElementById('auth-error');
+      const successEl = document.getElementById('auth-success');
+      const btn = document.getElementById('auth-btn');
+
+      errEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
+      if (authMode === 'signup' && !name) { errEl.textContent = 'Please enter your name.'; errEl.style.display = 'block'; return; }
+
+      btn.disabled = true;
+      btn.textContent = authMode === 'login' ? 'Signing in...' : 'Creating account...';
+
+      try {
+        if (authMode === 'signup') {
+          const { data, error } = await sb.auth.signUp({ email, password, options: { data: { display_name: name } } });
+          if (error) throw error;
+          if (data.user && !data.session) {
+            successEl.textContent = 'Check your email to confirm your account, then sign in.';
+            successEl.style.display = 'block';
+          }
+        } else {
+          const { error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+        }
+      } catch (err) {
+        errEl.textContent = err.message || 'Something went wrong. Please try again.';
+        errEl.style.display = 'block';
+      }
+
+      btn.disabled = false;
+      btn.textContent = authMode === 'login' ? 'Sign in' : 'Create account';
+    }
+
+    async function signOut() {
+      await sb.auth.signOut();
+      currentUser = null;
+      currentHousehold = null;
+      likedProperties = [];
+      likedIds = new Set();
+      dismissedIds = new Set();
+      hideNav();
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-auth').classList.add('active');
+    }
+
+    // ── Household ─────────────────────────────────────────
+
+    async function loadHousehold() {
+      const { data, error } = await sb.from('household_members')
+        .select('household_id, households(id, name)')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (error || !data) return null;
+      return data.households;
+    }
+
+    async function createHousehold() {
+      const name = document.getElementById('household-name-input').value.trim();
+      if (!name) { showToast('Please enter a household name'); return; }
+
+      const { data: hh, error: e1 } = await sb.from('households').insert({ name, owner_id: currentUser.id }).select().single();
+      if (e1) { showToast('Error creating household'); return; }
+
+      const { error: e2 } = await sb.from('household_members').insert({ household_id: hh.id, user_id: currentUser.id, display_name: currentUserName });
+      if (e2) { showToast('Error joining household'); return; }
+
+      // Merge any anonymous liked properties
+      await mergeAnonymousLikes(hh.id);
+
+      currentHousehold = hh;
+      await loadData();
+      showNav();
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-search').classList.add('active');
+      showToast('Household created!');
+    }
+
+    async function joinViaToken() {
+      const token = document.getElementById('invite-token-input').value.trim();
+      const errEl = document.getElementById('setup-error');
+      errEl.style.display = 'none';
+
+      if (!token) { errEl.textContent = 'Please paste your invite token.'; errEl.style.display = 'block'; return; }
+
+      const { data: invite, error } = await sb.from('household_invites').select('*').eq('token', token).eq('accepted', false).single();
+      if (error || !invite) { errEl.textContent = 'Invite not found or already used.'; errEl.style.display = 'block'; return; }
+
+      const { error: e2 } = await sb.from('household_members').upsert({ household_id: invite.household_id, user_id: currentUser.id, display_name: currentUserName }, { onConflict: 'household_id,user_id' });
+      if (e2) { errEl.textContent = 'Error joining household.'; errEl.style.display = 'block'; return; }
+
+      await sb.from('household_invites').update({ accepted: true }).eq('id', invite.id);
+
+      const { data: hh } = await sb.from('households').select('*').eq('id', invite.household_id).single();
+      await mergeAnonymousLikes(invite.household_id);
+
+      currentHousehold = hh;
+      await loadData();
+      showNav();
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-search').classList.add('active');
+      showToast(`Joined "${hh.name}"!`);
+    }
+
+    async function mergeAnonymousLikes(householdId) {
+      const anonLiked = JSON.parse(localStorage.getItem('hh_liked') || '[]');
+      if (anonLiked.length === 0) return;
+      for (const prop of anonLiked) {
+        await sb.from('liked_properties').upsert({
+          household_id: householdId,
+          property_id: prop.id,
+          property_data: prop,
+          liked_by_user_id: currentUser.id,
+          liked_by_name: currentUserName,
+          session_id: 'merged'
+        }, { onConflict: 'session_id,property_id' }).catch(() => {});
+      }
+      localStorage.removeItem('hh_liked');
+    }
+
+    async function sendInvite() {
+      const email = document.getElementById('invite-email').value.trim();
+      const btn = document.getElementById('invite-btn');
+      const successEl = document.getElementById('invite-success');
+      if (!email) { showToast('Enter an email address'); return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+
+      const { data: invite, error } = await sb.from('household_invites').insert({ household_id: currentHousehold.id, invited_email: email }).select().single();
+
+      if (error) {
+        showToast('Error sending invite');
+      } else {
+        successEl.style.display = 'block';
+        successEl.textContent = `Invite sent to ${email}! They should share this token to join: ${invite.token}`;
+        document.getElementById('invite-email').value = '';
+        renderHousehold();
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Send invite';
+    }
+
+    // ── Data loading ──────────────────────────────────────
+
+    async function loadData() {
+      setSyncState('syncing', 'loading');
+      try {
+        const [membersRes, likedRes, dismissedRes] = await Promise.all([
+          sb.from('household_members').select('user_id, display_name, joined_at').eq('household_id', currentHousehold.id),
+          sb.from('liked_properties').select('property_id, property_data, liked_by_name').eq('household_id', currentHousehold.id),
+          sb.from('dismissed_properties').select('property_id').eq('household_id', currentHousehold.id)
+        ]);
+
+        householdMembers = membersRes.data || [];
+        likedProperties = (likedRes.data || []).map(r => ({ ...r.property_data, likedByName: r.liked_by_name }));
+        likedIds = new Set((likedRes.data || []).map(r => r.property_id));
+        dismissedIds = new Set((dismissedRes.data || []).map(r => r.property_id));
+
+        setSyncState('ok', 'synced');
+        updateBadge();
+      } catch (err) {
+        setSyncState('error', 'offline');
+        showToast('Could not load data');
+      }
+    }
+
+    // ── Search & Swipe ────────────────────────────────────
+
+    function startSearch() {
+      queue = PROPERTIES.filter(p => !dismissedIds.has(p.id) && !likedIds.has(p.id));
+      if (queue.length === 0) {
+        dismissedIds = new Set();
+        queue = PROPERTIES.filter(p => !likedIds.has(p.id));
+        showToast('Starting fresh — dismissed properties reset');
+      }
+      currentIndex = 0;
+      document.getElementById('swipe-location').textContent = document.getElementById('s-location').value;
+      renderCards();
+      switchTab('swipe');
+    }
+
+    function renderCards() {
+      const stack = document.getElementById('card-stack');
+      stack.innerHTML = '';
+      const remaining = queue.length - currentIndex;
+
+      if (remaining === 0) {
+        document.getElementById('swipe-empty').style.display = 'flex';
+        document.getElementById('swipe-active').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('swipe-empty').style.display = 'none';
+      document.getElementById('swipe-active').style.display = 'flex';
+      document.getElementById('swipe-counter').textContent = `${remaining} propert${remaining === 1 ? 'y' : 'ies'} remaining`;
+      document.getElementById('progress-fill').style.width = `${Math.round((currentIndex / queue.length) * 100)}%`;
+
+      const show = Math.min(3, remaining);
+      for (let i = currentIndex + show - 1; i >= currentIndex; i--) {
+        const prop = queue[i];
+        const offset = i - currentIndex;
+        const card = document.createElement('div');
+        card.className = 'prop-card ' + (offset === 0 ? 'top' : offset === 1 ? 'behind-1' : 'behind-2');
+        card.innerHTML = `
+          <div class="card-photo" style="background:${prop.bg};">
+            <span class="card-photo-emoji">${prop.emoji}</span>
+            <span class="type-badge">${prop.type}</span>
+          </div>
+          <div class="card-body">
+            <div class="card-price">${prop.price}</div>
+            <div class="card-address">${prop.address}</div>
+            <div class="card-tags">
+              <span class="card-tag">${prop.beds} bed${prop.beds>1?'s':''}</span>
+              <span class="card-tag">${prop.baths} bath</span>
+              <span class="card-tag">${prop.sqft.toLocaleString()} sq ft</span>
+              ${prop.garden ? '<span class="card-tag green">Garden</span>' : ''}
+            </div>
+            <div class="card-desc">${prop.desc}</div>
+          </div>
+        `;
+        stack.appendChild(card);
+      }
+    }
+
+    function swipe(action) {
+      if (isAnimating || currentIndex >= queue.length) return;
+      isAnimating = true;
+      const prop = queue[currentIndex];
+      const topCard = document.querySelector('.prop-card.top');
+      if (!topCard) { isAnimating = false; return; }
+
+      if (action === 'like') {
+        topCard.classList.add('fly-right');
+        saveLiked(prop);
+        showToast('Saved for the household ♥');
+      } else {
+        topCard.classList.add('fly-left');
+        saveDismissed(prop.id);
+      }
+
+      setTimeout(() => { currentIndex++; isAnimating = false; renderCards(); }, 360);
+    }
+
+    async function saveLiked(prop) {
+      likedIds.add(prop.id);
+      likedProperties.push({ ...prop, likedByName: currentUserName });
+      updateBadge();
+      setSyncState('syncing', 'saving');
+      try {
+        const { error } = await sb.from('liked_properties').upsert({
+          household_id: currentHousehold.id,
+          session_id: currentUser.id,
+          property_id: prop.id,
+          property_data: prop,
+          liked_by_user_id: currentUser.id,
+          liked_by_name: currentUserName
+        }, { onConflict: 'session_id,property_id' });
+        if (error) throw error;
+        setSyncState('ok', 'synced');
+      } catch { setSyncState('error', 'offline'); }
+    }
+
+    async function saveDismissed(propId) {
+      dismissedIds.add(propId);
+      try {
+        await sb.from('dismissed_properties').upsert({
+          household_id: currentHousehold.id,
+          session_id: currentUser.id,
+          property_id: propId
+        }, { onConflict: 'session_id,property_id' });
+      } catch {}
+    }
+
+    async function removeLiked(propId) {
+      likedIds.delete(propId);
+      likedProperties = likedProperties.filter(p => p.id !== propId);
+      setSyncState('syncing', 'saving');
+      try {
+        await sb.from('liked_properties').delete()
+          .eq('household_id', currentHousehold.id)
+          .eq('property_id', propId);
+        setSyncState('ok', 'synced');
+        showToast('Property removed');
+      } catch { setSyncState('error', 'offline'); }
+      updateBadge();
+      renderLiked();
+    }
+
+    // ── Render ────────────────────────────────────────────
+
+    function renderLiked() {
+      const grid = document.getElementById('liked-grid');
+      grid.innerHTML = '';
+      updateBadge();
+      if (likedProperties.length === 0) {
+        grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🏠</div><p class="empty-title">No saved properties</p><p class="empty-sub">Properties liked by anyone in your household will appear here.</p></div>`;
+        return;
+      }
+      likedProperties.forEach(prop => {
+        const card = document.createElement('div');
+        card.className = 'liked-card';
+        card.innerHTML = `
+          <div class="liked-thumb" style="background:${prop.bg};">${prop.emoji}</div>
+          <div class="liked-info">
+            <div class="liked-price">${prop.price}</div>
+            <div class="liked-addr">${prop.address}</div>
+            <div class="liked-tags">
+              <span class="liked-tag">${prop.beds} bed${prop.beds>1?'s':''}</span>
+              <span class="liked-tag">${prop.type}</span>
+              ${prop.garden ? '<span class="liked-tag">Garden</span>' : ''}
+              <span class="liked-tag">${prop.sqft.toLocaleString()} sq ft</span>
+            </div>
+            ${prop.likedByName ? `<div class="liked-by">♥ ${prop.likedByName}</div>` : ''}
+          </div>
+          <button class="liked-remove" onclick="removeLiked(${prop.id})" title="Remove">✕</button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function renderHousehold() {
+      if (!currentHousehold) return;
+      document.getElementById('hh-name-display').textContent = currentHousehold.name;
+      document.getElementById('hh-meta-display').textContent = `${householdMembers.length} member${householdMembers.length !== 1 ? 's' : ''}`;
+
+      const memberList = document.getElementById('member-list');
+      memberList.innerHTML = '';
+      householdMembers.forEach(m => {
+        const isYou = m.user_id === currentUser.id;
+        const isOwner = currentHousehold.owner_id === m.user_id;
+        const initials = m.display_name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+        const div = document.createElement('div');
+        div.className = 'member-row';
+        div.innerHTML = `
+          <div class="member-avatar">${initials}</div>
+          <div>
+            <span class="member-name">${m.display_name}</span>
+            ${isYou ? '<span class="member-you">(you)</span>' : ''}
+          </div>
+          ${isOwner ? '<span class="member-owner">owner</span>' : ''}
+        `;
+        memberList.appendChild(div);
+      });
+
+      // Pending invites
+      const { data: pending } = await sb.from('household_invites')
+        .select('invited_email, token, created_at')
+        .eq('household_id', currentHousehold.id)
+        .eq('accepted', false);
+
+      const pendingList = document.getElementById('pending-list');
+      const pendingLabel = document.getElementById('pending-label');
+      pendingList.innerHTML = '';
+      if (pending && pending.length > 0) {
+        pendingLabel.style.display = 'block';
+        pending.forEach(inv => {
+          const div = document.createElement('div');
+          div.className = 'pending-invite';
+          div.innerHTML = `
+            <div>
+              <div>${inv.invited_email}</div>
+              <div class="pending-label">Token: ${inv.token}</div>
+            </div>
+            <span style="font-size:11px;color:var(--text-tertiary);">pending</span>
+          `;
+          pendingList.appendChild(div);
+        });
+      } else {
+        pendingLabel.style.display = 'none';
+      }
+    }
+
+    // ── Boot ──────────────────────────────────────────────
+
+    // Check for invite token in URL
+    function getInviteTokenFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('invite');
+    }
+
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        currentUser = session.user;
+        currentUserName = currentUser.user_metadata?.display_name || currentUser.email.split('@')[0];
+
+        // Check for pending invite token
+        const urlToken = getInviteTokenFromURL();
+        if (urlToken) {
+          document.getElementById('invite-token-input').value = urlToken;
+        }
+
+        // Load household
+        const hh = await loadHousehold();
+
+        hideLoading();
+
+        if (hh) {
+          currentHousehold = hh;
+          await loadData();
+          showNav();
+          document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+          document.getElementById('view-search').classList.add('active');
+        } else {
+          // No household yet — show setup
+          document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+          document.getElementById('view-setup').classList.add('active');
+        }
+      } else {
+        currentUser = null;
+        hideLoading();
+        hideNav();
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-auth').classList.add('active');
+      }
+    });
+
+    document.addEventListener('keydown', e => {
+      if (!document.getElementById('view-swipe').classList.contains('active')) return;
+      if (e.key === 'ArrowRight') swipe('like');
+      if (e.key === 'ArrowLeft') swipe('skip');
+    });
+
+    // Allow Enter key in auth fields
+    ['auth-email','auth-password','auth-name'].forEach(id => {
+      document.getElementById(id)?.addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); });
+    });
+  </script>
+</body>
+</html>
