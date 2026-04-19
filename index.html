@@ -525,12 +525,14 @@
           <button class="source-add-btn" id="source-add-btn" onclick="addSource()">Add</button>
         </div>
         <div class="source-hints">
-          <div class="source-hint-label">Quick add</div>
+          <div class="source-hint-label">Works with</div>
           <div class="source-chips">
-            <span class="source-chip" onclick="prefillSource('rightmove')">🏠 Rightmove template</span>
-            <span class="source-chip" onclick="prefillSource('zoopla')">🔍 Zoopla template</span>
-            <span class="source-chip" onclick="prefillSource('onthemarket')">📋 OnTheMarket template</span>
+            <span class="source-chip">🏘️ Independent agents</span>
+            <span class="source-chip">🏡 Local estate agents</span>
+            <span class="source-chip">🔜 Rightmove — coming soon</span>
+            <span class="source-chip">🔜 Zoopla — coming soon</span>
           </div>
+          <div class="location-hint" style="margin-top:6px;">Paste the URL of a search results page from any independent estate agent. Major portals (Rightmove, Zoopla) will be added via their official APIs soon.</div>
         </div>
       </div>
       <div class="section-label" id="sources-list-label" style="display:none;">Your sources</div>
@@ -943,24 +945,11 @@
     // ── Sources ───────────────────────────────────────────
     let householdSources = [];
 
-    const SITE_TEMPLATES = {
-      rightmove: { name: 'Rightmove', icon: '🏠', url: 'https://www.rightmove.co.uk/property-for-sale/find.html?searchType=SALE&locationIdentifier=REGION%5E274&minBedrooms=2&maxPrice=500000&displayPropertyType=houses' },
-      zoopla:    { name: 'Zoopla',    icon: '🔍', url: 'https://www.zoopla.co.uk/for-sale/property/london/?price_max=500000&beds_min=2' },
-      onthemarket: { name: 'OnTheMarket', icon: '📋', url: 'https://www.onthemarket.com/for-sale/property/london/?max-price=500000&min-bedrooms=2' },
-    };
+    const BLOCKED_PORTAL_DOMAINS = ["rightmove.co.uk", "zoopla.co.uk", "onthemarket.com", "primelocation.com"];
 
     function detectSite(url) {
-      if (url.includes('rightmove.co.uk')) return { name: 'Rightmove', icon: '🏠' };
-      if (url.includes('zoopla.co.uk'))    return { name: 'Zoopla',    icon: '🔍' };
-      if (url.includes('onthemarket.com')) return { name: 'OnTheMarket', icon: '📋' };
-      try { return { name: new URL(url).hostname.replace('www.',''), icon: '🌐' }; }
-      catch { return { name: 'Unknown site', icon: '🌐' }; }
-    }
-
-    function prefillSource(siteKey) {
-      const t = SITE_TEMPLATES[siteKey];
-      if (t) document.getElementById('source-url-input').value = t.url;
-      document.getElementById('source-url-input').focus();
+      try { return { name: new URL(url).hostname.replace('www.',''), icon: '🏡' }; }
+      catch { return { name: 'Estate agent', icon: '🏡' }; }
     }
 
     async function addSource() {
@@ -968,6 +957,10 @@
       const btn = document.getElementById('source-add-btn');
       if (!urlVal) { showToast('Please paste a URL'); return; }
       try { new URL(urlVal); } catch { showToast('That doesn\'t look like a valid URL'); return; }
+      if (BLOCKED_PORTAL_DOMAINS.some(d => urlVal.includes(d))) {
+        showToast('Rightmove, Zoopla & OnTheMarket coming soon via official API 🔜');
+        return;
+      }
       if (!currentHousehold) { showToast('No household found'); return; }
       const site = detectSite(urlVal);
       btn.disabled = true; btn.textContent = 'Adding...';
