@@ -369,23 +369,19 @@
   <div id="view-search" class="view">
     <div class="search-panel">
       <h1 class="panel-title">Find your next home</h1>
-      <p class="panel-sub">Search live Zoopla listings</p>
+      <p class="panel-sub">Browse sample listings</p>
 
       <div class="location-wrap">
         <div class="location-input-row">
           <input
             type="text"
             id="location-input"
-            placeholder="Type a location, e.g. Manchester"
+            placeholder="Filter by city, e.g. Manchester"
             autocomplete="off"
-            oninput="onLocationInput(event)"
-            onkeydown="onLocationKeydown(event)"
           />
           <button class="location-search-btn" onclick="lookupAndSearch()">Search</button>
         </div>
-        <div id="location-confirmed" class="location-confirmed"></div>
-        <p class="location-hint" id="location-hint">Type a town, city or postcode — suggestions will appear</p>
-        <div class="suggestions-list" id="suggestions-list"></div>
+        <p class="location-hint" id="location-hint">Leave blank to browse all sample listings</p>
       </div>
 
       <div class="field-grid">
@@ -438,7 +434,7 @@
     <div class="empty-state">
       <div class="empty-icon">🏡</div>
       <p class="empty-title">Ready to explore</p>
-      <p class="empty-sub">Type a UK location above and hit Search to load real listings from Zoopla.</p>
+      <p class="empty-sub">Use the filters above and hit Search to browse sample listings.</p>
     </div>
   </div>
 
@@ -503,20 +499,30 @@
   <script>
     const SUPABASE_URL = 'https://zfgrpnzgvzohjddaxntg.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_EfZGdOPHvDnNQEjeDUGeDQ_NNg46SBl';
-    const RAPIDAPI_KEY = '0d2528fa61msh3af2b6306f71179p111327jsn1b2354008bd0';
-    const RAPIDAPI_HOST = 'zoopla-real-time.p.rapidapi.com';
 
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ── Sample property data ──────────────────────────────
+    const SAMPLE_PROPERTIES = [
+      { id: 'p001', price: '£425,000', address: '14 Elm Grove, Manchester, M14 5RQ', type: 'Semi-detached', beds: 3, baths: 1, sqft: 1050, garden: true, agent: 'Hunters Estate Agents', url: null, thumb: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=80', photos: ['https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=80'], desc: 'A beautifully presented three-bedroom semi-detached home on a quiet residential street. Features a newly fitted kitchen, spacious lounge, and a generous south-facing rear garden. Close to local schools and transport links.' },
+      { id: 'p002', price: '£289,000', address: 'Flat 6, The Granary, Bristol, BS1 4RB', type: 'Flat', beds: 2, baths: 1, sqft: 720, garden: false, agent: 'Savills Bristol', url: null, thumb: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80', photos: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80'], desc: 'Stylish two-bedroom apartment in a converted Victorian granary. Exposed brick walls, high ceilings, and stunning views over the harbourside. Secure parking included.' },
+      { id: 'p003', price: '£675,000', address: '2 Hawthorn Lane, Guildford, GU2 7PL', type: 'Detached', beds: 4, baths: 2, sqft: 1800, garden: true, agent: 'Knight Frank', url: null, thumb: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=80', photos: ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=80'], desc: 'Substantial four-bedroom detached family home set on a quiet lane. Double garage, mature garden, large kitchen-diner with bi-fold doors. Excellent catchment for top-rated schools.' },
+      { id: 'p004', price: '£199,500', address: '38 Station Road, Leeds, LS7 3NJ', type: 'Terraced', beds: 2, baths: 1, sqft: 820, garden: true, agent: 'Manning Stainton', url: null, thumb: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=600&q=80', photos: ['https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=600&q=80'], desc: 'Charming Victorian terrace with original features retained throughout. Two good-sized bedrooms, a cosy sitting room with bay window, and a private rear courtyard garden.' },
+      { id: 'p005', price: '£550,000', address: '9 Orchard Rise, Edinburgh, EH10 5TF', type: 'Detached', beds: 4, baths: 3, sqft: 2100, garden: true, agent: 'Strutt & Parker', url: null, thumb: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600&q=80', photos: ['https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600&q=80'], desc: 'Stunning modern detached home with panoramic views. Open-plan living, high-spec kitchen, master suite with en-suite and dressing room. EV charger and solar panels included.' },
+      { id: 'p006', price: '£315,000', address: '22 Marlborough Street, Brighton, BN1 3LB', type: 'Terraced', beds: 3, baths: 1, sqft: 990, garden: false, agent: 'Mishon Mackay', url: null, thumb: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80', photos: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80'], desc: 'Bright and airy terraced house a short walk from the seafront. Three bedrooms, recently renovated bathroom, and a sunny roof terrace. Perfect for professionals or young families.' },
+      { id: 'p007', price: '£235,000', address: 'Apartment 12, Crown Works, Birmingham, B1 2JT', type: 'Flat', beds: 1, baths: 1, sqft: 520, garden: false, agent: 'Purplebricks', url: null, thumb: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80', photos: ['https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&q=80'], desc: 'Contemporary one-bedroom apartment in a sought-after city-centre development. Floor-to-ceiling windows, fully fitted kitchen, and access to a residents gym and concierge.' },
+      { id: 'p008', price: '£485,000', address: '7 Birchwood Close, Oxford, OX2 6HN', type: 'Semi-detached', beds: 3, baths: 2, sqft: 1120, garden: true, agent: 'Carter Jonas', url: null, thumb: 'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=600&q=80', photos: ['https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=600&q=80'], desc: 'Well-presented three-bed semi with a lovely landscaped garden and off-road parking. Walking distance to good primary schools and local shops. Recently extended to the rear.' },
+      { id: 'p009', price: '£159,000', address: '55 Coalville Terrace, Sheffield, S6 2WA', type: 'Terraced', beds: 2, baths: 1, sqft: 740, garden: true, agent: 'Blundells', url: null, thumb: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80', photos: ['https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80'], desc: 'Ideal first home or buy-to-let. Two bedrooms, updated kitchen, private yard at the rear. Good transport links into the city centre. Priced to sell.' },
+      { id: 'p010', price: '£895,000', address: '1 The Meadows, Henley-on-Thames, RG9 2LL', type: 'Detached', beds: 5, baths: 3, sqft: 2650, garden: true, agent: 'Hamptons International', url: null, thumb: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=600&q=80', photos: ['https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=600&q=80'], desc: 'Magnificent five-bedroom country home set in half an acre. Bespoke kitchen, wine cellar, triple garage, and a heated swimming pool. An exceptional family residence.' },
+      { id: 'p011', price: '£349,000', address: '3 Riverside Walk, Cambridge, CB4 1UY', type: 'Semi-detached', beds: 3, baths: 2, sqft: 1030, garden: true, agent: 'Bidwells', url: null, thumb: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80', photos: ['https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80'], desc: 'Attractive semi-detached property just minutes from the river. Tastefully updated throughout with a modern kitchen-diner opening onto a private walled garden.' },
+      { id: 'p012', price: '£269,000', address: 'Flat 3, Park View House, Nottingham, NG7 1QA', type: 'Flat', beds: 2, baths: 1, sqft: 690, garden: false, agent: 'Robert Ellis', url: null, thumb: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80', photos: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80'], desc: 'Spacious two-bedroom apartment in a well-managed period conversion. High ceilings, original cornicing, juliet balcony overlooking the park. Long lease remaining.' },
+    ];
 
     let currentUser = null, currentUserName = '';
     let currentHousehold = null, householdMembers = [];
     let likedProperties = [], likedIds = new Set(), dismissedIds = new Set();
     let queue = [], currentIndex = 0, isAnimating = false;
     let authMode = 'login';
-    let selectedGeo = null; // { geoIdentifier, geoLabel } — set when user picks from suggestions
-    let acTimer = null;
-    let suggestions = [];
-    let highlightedIndex = -1;
 
     // ── Helpers ───────────────────────────────────────────
     let toastTimer;
@@ -557,200 +563,34 @@
       if (meta) meta.textContent = likedIds.size === 0 ? 'No saved properties yet' : `${likedIds.size} propert${likedIds.size === 1 ? 'y' : 'ies'} saved by your household`;
     }
 
-    // ── Location input ────────────────────────────────────
-    function onLocationInput(e) {
-      const val = e.target.value.trim();
-      // Clear confirmed geo when user edits
-      selectedGeo = null;
-      document.getElementById('location-confirmed').style.display = 'none';
-      clearTimeout(acTimer);
-      if (val.length < 2) { hideSuggestions(); return; }
-      acTimer = setTimeout(() => fetchSuggestions(val), 400);
-    }
-
-    function onLocationKeydown(e) {
-      const list = document.getElementById('suggestions-list');
-      if (list.style.display === 'none') return;
-      if (e.key === 'ArrowDown') { e.preventDefault(); highlightedIndex = Math.min(highlightedIndex + 1, suggestions.length - 1); renderHighlight(); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); highlightedIndex = Math.max(highlightedIndex - 1, 0); renderHighlight(); }
-      else if (e.key === 'Enter' && highlightedIndex >= 0) { e.preventDefault(); selectSuggestion(suggestions[highlightedIndex]); }
-    }
-
-    async function fetchSuggestions(query) {
-      try {
-        const res = await fetch(`https://${RAPIDAPI_HOST}/auto-complete?query=${encodeURIComponent(query)}`, {
-          headers: { 'x-rapidapi-key': RAPIDAPI_KEY, 'x-rapidapi-host': RAPIDAPI_HOST }
-        });
-        if (!res.ok) throw new Error('autocomplete failed');
-        const data = await res.json();
-        suggestions = (data?.data?.geoSuggestions || []).slice(0, 6);
-        renderSuggestions();
-      } catch {
-        // Autocomplete failed silently — user can still type freely and search
-        hideSuggestions();
-      }
-    }
-
-    function renderSuggestions() {
-      const list = document.getElementById('suggestions-list');
-      if (!suggestions.length) { hideSuggestions(); return; }
-      highlightedIndex = -1;
-      list.innerHTML = '';
-      suggestions.forEach((s, i) => {
-        const item = document.createElement('div');
-        item.className = 'suggestion-item';
-        item.innerHTML = `<div class="s-label">${s.geoLabel || s.geoIdentifier}</div>`;
-        item.onmousedown = (e) => { e.preventDefault(); selectSuggestion(s); };
-        list.appendChild(item);
-      });
-      list.style.display = 'block';
-      document.getElementById('location-hint').style.display = 'none';
-    }
-
-    function renderHighlight() {
-      document.querySelectorAll('.suggestion-item').forEach((el, i) => {
-        el.classList.toggle('highlighted', i === highlightedIndex);
-      });
-    }
-
-    function selectSuggestion(s) {
-      selectedGeo = { geoIdentifier: s.geoIdentifier, geoLabel: s.geoLabel };
-      document.getElementById('location-input').value = s.geoLabel || s.geoIdentifier;
-      hideSuggestions();
-      const confirmed = document.getElementById('location-confirmed');
-      confirmed.textContent = `Searching in: ${s.geoLabel}`;
-      confirmed.style.display = 'block';
-    }
-
-    function hideSuggestions() {
-      document.getElementById('suggestions-list').style.display = 'none';
-    }
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.location-wrap')) hideSuggestions();
-    });
-
-    // ── Search ────────────────────────────────────────────
-    async function lookupAndSearch() {
+    // ── Search (sample data) ──────────────────────────────
+    function lookupAndSearch() {
       const inputVal = document.getElementById('location-input').value.trim();
-      if (!inputVal) { showToast('Please enter a location to search'); return; }
+      const beds = document.getElementById('s-beds').value;
+      const maxPrice = document.getElementById('s-maxprice').value;
+      const propType = document.getElementById('s-type').value;
 
-      // If user hasn't picked from suggestions, try to look up the location first
-      if (!selectedGeo) {
-        try {
-          const res = await fetch(`https://${RAPIDAPI_HOST}/auto-complete?query=${encodeURIComponent(inputVal)}`, {
-            headers: { 'x-rapidapi-key': RAPIDAPI_KEY, 'x-rapidapi-host': RAPIDAPI_HOST }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const first = (data?.data?.geoSuggestions || [])[0];
-            if (first) {
-              selectedGeo = { geoIdentifier: first.geoIdentifier, geoLabel: first.geoLabel };
-            }
-          }
-        } catch { /* fall through */ }
-      }
+      let results = SAMPLE_PROPERTIES.filter(p => {
+        if (inputVal && !p.address.toLowerCase().includes(inputVal.toLowerCase())) return false;
+        if (beds && p.beds < parseInt(beds)) return false;
+        if (maxPrice) {
+          const numPrice = parseInt(p.price.replace(/[^0-9]/g, ''));
+          if (numPrice > parseInt(maxPrice)) return false;
+        }
+        if (propType && p.type.toLowerCase().replace(/[^a-z]/g, '_') !== propType) return false;
+        return true;
+      }).filter(p => !dismissedIds.has(p.id) && !likedIds.has(p.id));
 
-      // If we still have no geo, we can't search — the API requires geoIdentifier
-      if (!selectedGeo) {
-        showToast('Could not find that location. Try typing more slowly and picking from the suggestions.');
+      if (!results.length) {
+        showToast('No properties match — try adjusting your filters');
         return;
       }
 
-      await doSearch();
-    }
-
-    async function doSearch() {
-      const btn = document.querySelector('.location-search-btn');
-      btn.textContent = 'Searching...';
-      btn.disabled = true;
-
+      queue = results;
+      currentIndex = 0;
+      document.getElementById('swipe-location-label').textContent = inputVal || 'Sample listings';
       switchTab('swipe');
-      showLoadingCards();
-
-      try {
-        const params = new URLSearchParams({
-          geoIdentifier: selectedGeo.geoIdentifier,
-          geoLabel: selectedGeo.geoLabel,
-          sort: 'newest_listings',
-          page: '1'
-        });
-
-        const beds = document.getElementById('s-beds').value;
-        const maxPrice = document.getElementById('s-maxprice').value;
-        const propType = document.getElementById('s-type').value;
-        const radius = document.getElementById('s-radius').value;
-
-        if (beds) params.append('bedrooms', beds);
-        if (maxPrice) params.append('priceRange', `,${maxPrice}`);
-        if (propType) params.append('propertytype', propType);
-        if (radius && radius !== '0') params.append('radius', radius);
-
-        const res = await fetch(`https://${RAPIDAPI_HOST}/properties-for-sale?${params}`, {
-          headers: { 'x-rapidapi-key': RAPIDAPI_KEY, 'x-rapidapi-host': RAPIDAPI_HOST }
-        });
-
-        if (!res.ok) throw new Error(`API ${res.status}`);
-        const data = await res.json();
-
-        const listings = data?.data?.listings || data?.listings || [];
-
-        if (!listings.length) {
-          showToast('No properties found — try adjusting your search criteria');
-          switchTab('search');
-          btn.textContent = 'Search'; btn.disabled = false;
-          return;
-        }
-
-        queue = listings.map(normalise).filter(p => p && !dismissedIds.has(p.id) && !likedIds.has(p.id));
-        currentIndex = 0;
-        document.getElementById('swipe-location-label').textContent = selectedGeo.geoLabel;
-        renderCards();
-
-      } catch (err) {
-        console.error(err);
-        showToast('Search failed — please check your connection and try again');
-        switchTab('search');
-      }
-
-      btn.textContent = 'Search'; btn.disabled = false;
-    }
-
-    function normalise(l) {
-      try {
-        const id = String(l.listingId || l.id || Math.random().toString(36).slice(2));
-        const priceVal = l.price?.value || l.price;
-        const price = l.price?.displayPrice || (priceVal ? `£${Number(priceVal).toLocaleString()}` : 'Price on request');
-        const address = l.address?.displayAddress || l.displayAddress || [l.address?.street, l.address?.postcode].filter(Boolean).join(', ') || 'Address unavailable';
-        const type = l.propertyType || l.property_type || '';
-        const beds = l.bedrooms ?? l.beds ?? 0;
-        const baths = l.bathrooms ?? l.baths ?? 0;
-        const sqft = l.floorArea?.value || l.floorAreaSqFt || null;
-        const desc = l.description || l.summary || '';
-        const photos = (l.images || l.photos || []).map(i => typeof i === 'string' ? i : i.url || i.src).filter(Boolean);
-        const thumb = photos[0] || null;
-        const agent = l.agent?.name || l.branchName || '';
-        const url = l.detailUrl ? `https://www.zoopla.co.uk${l.detailUrl}` : (l.listingUrl || null);
-        const garden = (desc + ' ' + (Array.isArray(l.features) ? l.features.join(' ') : '')).toLowerCase().includes('garden');
-        return { id, price, address, type, beds, baths, sqft, desc, photos, thumb, agent, url, garden };
-      } catch { return null; }
-    }
-
-    function showLoadingCards() {
-      document.getElementById('swipe-empty').style.display = 'none';
-      document.getElementById('swipe-active').style.display = 'flex';
-      document.getElementById('swipe-counter').textContent = 'Searching Zoopla...';
-      document.getElementById('progress-fill').style.width = '0%';
-      document.getElementById('card-stack').innerHTML = `
-        <div class="prop-card top" style="display:flex;align-items:center;justify-content:center;">
-          <div class="card-loading">
-            <div style="font-size:40px;">🏠</div>
-            <div style="font-size:13px;color:var(--text-secondary);font-weight:300;">Loading Zoopla listings...</div>
-            <div class="loading-dots-sm">
-              <div class="loading-dot-sm"></div><div class="loading-dot-sm"></div><div class="loading-dot-sm"></div>
-            </div>
-          </div>
-        </div>`;
+      renderCards();
     }
 
     function renderCards() {
