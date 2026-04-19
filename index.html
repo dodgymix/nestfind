@@ -281,6 +281,43 @@
     .loading-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: dotpulse 1.2s infinite; }
     .loading-dot:nth-child(2) { animation-delay: 0.2s; }
     .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    /* SOURCES */
+    .sources-header { padding: 16px 20px 12px; background: var(--bg-primary); border-bottom: 0.5px solid var(--border-light); }
+    .sources-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 400; }
+    .sources-sub { font-size: 12px; color: var(--text-secondary); margin-top: 3px; font-weight: 300; line-height: 1.6; }
+    .sources-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; flex: 1; }
+    .source-add-card { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .source-add-title { font-size: 13px; font-weight: 500; }
+    .source-add-sub { font-size: 12px; color: var(--text-secondary); font-weight: 300; margin-top: -6px; line-height: 1.6; }
+    .source-input-row { display: flex; gap: 8px; }
+    .source-input-row input { flex: 1; padding: 10px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg-secondary); border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); color: var(--text-primary); outline: none; }
+    .source-input-row input:focus { border-color: var(--green); }
+    .source-add-btn { padding: 10px 14px; background: var(--green); color: white; border: none; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+    .source-add-btn:hover { background: var(--green-dark); }
+    .source-add-btn:disabled { background: var(--text-tertiary); cursor: not-allowed; }
+    .source-hints { display: flex; flex-direction: column; gap: 6px; }
+    .source-hint-label { font-size: 11px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.07em; text-transform: uppercase; }
+    .source-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .source-chip { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: var(--bg-secondary); border: 0.5px solid var(--border-mid); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+    .source-chip:hover { background: var(--green-light); color: var(--green-dark); border-color: #9FE1CB; }
+    .source-list { display: flex; flex-direction: column; gap: 8px; }
+    .source-card { background: var(--bg-primary); border: 0.5px solid var(--border-light); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; }
+    .source-icon { width: 36px; height: 36px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; background: var(--bg-secondary); border: 0.5px solid var(--border-light); }
+    .source-info { flex: 1; min-width: 0; }
+    .source-name { font-size: 13px; font-weight: 500; }
+    .source-url { font-size: 11px; color: var(--text-tertiary); font-weight: 300; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .source-status { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; margin-top: 5px; padding: 2px 8px; border-radius: 10px; }
+    .source-status.active { background: var(--green-light); color: var(--green-dark); border: 0.5px solid #9FE1CB; }
+    .source-status.error { background: var(--red-light); color: var(--red); border: 0.5px solid rgba(226,75,74,0.3); }
+    .source-status.pending { background: var(--bg-secondary); color: var(--text-secondary); border: 0.5px solid var(--border-light); }
+    .source-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .source-browse-btn { font-size: 11px; padding: 5px 10px; background: var(--green); color: white; border: none; border-radius: 6px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+    .source-browse-btn:hover { background: var(--green-dark); }
+    .source-browse-btn:disabled { background: var(--text-tertiary); cursor: not-allowed; }
+    .source-delete-btn { font-size: 13px; background: none; border: none; cursor: pointer; color: var(--text-tertiary); padding: 4px; transition: color 0.15s; }
+    .source-delete-btn:hover { color: var(--red); }
+    .source-scraping { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
   </style>
 </head>
 <body>
@@ -301,6 +338,7 @@
         <button class="tab active" onclick="switchTab('search')">Search</button>
         <button class="tab" onclick="switchTab('swipe')">Browse</button>
         <button class="tab" onclick="switchTab('liked')">Saved <span class="badge" id="liked-count" style="display:none">0</span></button>
+        <button class="tab" onclick="switchTab('sources')">Sources</button>
         <button class="tab" onclick="switchTab('household')">Home</button>
       </div>
     </div>
@@ -369,7 +407,7 @@
   <div id="view-search" class="view">
     <div class="search-panel">
       <h1 class="panel-title">Find your next home</h1>
-      <p class="panel-sub">Browse sample listings</p>
+      <p class="panel-sub" id="search-sub">Add sources to browse live listings</p>
 
       <div class="location-wrap">
         <div class="location-input-row">
@@ -431,10 +469,11 @@
         </div>
       </div>
     </div>
-    <div class="empty-state">
+    <div class="empty-state" id="search-empty">
       <div class="empty-icon">🏡</div>
       <p class="empty-title">Ready to explore</p>
-      <p class="empty-sub">Use the filters above and hit Search to browse sample listings.</p>
+      <p class="empty-sub" id="search-empty-sub">Use the filters above and hit Search to browse listings.</p>
+      <button class="empty-btn" id="search-empty-btn" onclick="switchTab('sources')" style="display:none;">Add a source →</button>
     </div>
   </div>
 
@@ -469,6 +508,34 @@
       <div class="liked-meta" id="liked-meta">Loading...</div>
     </div>
     <div class="liked-grid" id="liked-grid"></div>
+  </div>
+
+  <!-- SOURCES -->
+  <div id="view-sources" class="view">
+    <div class="sources-header">
+      <div class="sources-title">Property sources</div>
+      <div class="sources-sub">Add search result URLs from estate agents. We'll scrape them for live listings.</div>
+    </div>
+    <div class="sources-body">
+      <div class="source-add-card">
+        <div class="source-add-title">Add a source URL</div>
+        <div class="source-add-sub">Paste a search results page from Rightmove, Zoopla, OnTheMarket, or any estate agent site.</div>
+        <div class="source-input-row">
+          <input type="url" id="source-url-input" placeholder="https://www.rightmove.co.uk/property-for-sale/find.html?..." />
+          <button class="source-add-btn" id="source-add-btn" onclick="addSource()">Add</button>
+        </div>
+        <div class="source-hints">
+          <div class="source-hint-label">Quick add</div>
+          <div class="source-chips">
+            <span class="source-chip" onclick="prefillSource('rightmove')">🏠 Rightmove template</span>
+            <span class="source-chip" onclick="prefillSource('zoopla')">🔍 Zoopla template</span>
+            <span class="source-chip" onclick="prefillSource('onthemarket')">📋 OnTheMarket template</span>
+          </div>
+        </div>
+      </div>
+      <div class="section-label" id="sources-list-label" style="display:none;">Your sources</div>
+      <div class="source-list" id="source-list"></div>
+    </div>
   </div>
 
   <!-- HOUSEHOLD -->
@@ -549,9 +616,10 @@
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.getElementById('view-' + tab).classList.add('active');
-      document.querySelectorAll('.tab')[{search:0,swipe:1,liked:2,household:3}[tab]].classList.add('active');
+      document.querySelectorAll('.tab')[{search:0,swipe:1,liked:2,sources:3,household:4}[tab]].classList.add('active');
       if (tab === 'liked') renderLiked();
       if (tab === 'household') renderHousehold();
+      if (tab === 'sources') renderSources();
     }
 
     function updateBadge() {
@@ -763,8 +831,10 @@
         likedProperties = (likedRes.data || []).map(r => ({ ...r.property_data, likedByName: r.liked_by_name }));
         likedIds = new Set((likedRes.data || []).map(r => r.property_id));
         dismissedIds = new Set((dismissedRes.data || []).map(r => r.property_id));
+        await loadSources();
         setSyncState('ok', 'synced');
         updateBadge();
+        updateSearchPanel();
       } catch { setSyncState('error', 'offline'); }
     }
 
@@ -868,6 +938,158 @@
 
     function copyLink(link, btn) {
       navigator.clipboard.writeText(link).then(() => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy link', 2000); });
+    }
+
+    // ── Sources ───────────────────────────────────────────
+    let householdSources = [];
+
+    const SITE_TEMPLATES = {
+      rightmove: { name: 'Rightmove', icon: '🏠', url: 'https://www.rightmove.co.uk/property-for-sale/find.html?searchType=SALE&locationIdentifier=REGION%5E274&minBedrooms=2&maxPrice=500000&displayPropertyType=houses' },
+      zoopla:    { name: 'Zoopla',    icon: '🔍', url: 'https://www.zoopla.co.uk/for-sale/property/london/?price_max=500000&beds_min=2' },
+      onthemarket: { name: 'OnTheMarket', icon: '📋', url: 'https://www.onthemarket.com/for-sale/property/london/?max-price=500000&min-bedrooms=2' },
+    };
+
+    function detectSite(url) {
+      if (url.includes('rightmove.co.uk')) return { name: 'Rightmove', icon: '🏠' };
+      if (url.includes('zoopla.co.uk'))    return { name: 'Zoopla',    icon: '🔍' };
+      if (url.includes('onthemarket.com')) return { name: 'OnTheMarket', icon: '📋' };
+      try { return { name: new URL(url).hostname.replace('www.',''), icon: '🌐' }; }
+      catch { return { name: 'Unknown site', icon: '🌐' }; }
+    }
+
+    function prefillSource(siteKey) {
+      const t = SITE_TEMPLATES[siteKey];
+      if (t) document.getElementById('source-url-input').value = t.url;
+      document.getElementById('source-url-input').focus();
+    }
+
+    async function addSource() {
+      const urlVal = document.getElementById('source-url-input').value.trim();
+      const btn = document.getElementById('source-add-btn');
+      if (!urlVal) { showToast('Please paste a URL'); return; }
+      try { new URL(urlVal); } catch { showToast('That doesn\'t look like a valid URL'); return; }
+      if (!currentHousehold) { showToast('No household found'); return; }
+      const site = detectSite(urlVal);
+      btn.disabled = true; btn.textContent = 'Adding...';
+      const { data, error } = await sb.from('scrape_sources').insert({
+        household_id: currentHousehold.id,
+        url: urlVal,
+        site_name: site.name,
+        site_icon: site.icon,
+        added_by_user_id: currentUser.id,
+        added_by_name: currentUserName,
+        status: 'pending'
+      }).select().single();
+      btn.disabled = false; btn.textContent = 'Add';
+      if (error) { showToast('Error saving source: ' + error.message); return; }
+      householdSources.push(data);
+      document.getElementById('source-url-input').value = '';
+      renderSources();
+      showToast(`${site.name} source added ✓`);
+    }
+
+    async function loadSources() {
+      if (!currentHousehold) return;
+      const { data } = await sb.from('scrape_sources').select('*').eq('household_id', currentHousehold.id).order('created_at', { ascending: false });
+      householdSources = data || [];
+    }
+
+    async function deleteSource(id) {
+      await sb.from('scrape_sources').delete().eq('id', id);
+      householdSources = householdSources.filter(s => s.id !== id);
+      renderSources();
+      updateSearchPanel();
+      showToast('Source removed');
+    }
+
+    async function scrapeSource(source) {
+      const card = document.getElementById('source-card-' + source.id);
+      const btn = card?.querySelector('.source-browse-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Scraping…'; }
+      setSyncState('syncing', 'scraping');
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/scrape-properties`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
+          body: JSON.stringify({ url: source.url, household_id: currentHousehold.id })
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Scrape failed');
+        const props = json.properties || [];
+        if (!props.length) { showToast('No properties found — the site may block scrapers'); return; }
+        // Update source status
+        await sb.from('scrape_sources').update({ status: 'active', last_scraped_at: new Date().toISOString(), property_count: props.length }).eq('id', source.id);
+        const src = householdSources.find(s => s.id === source.id);
+        if (src) { src.status = 'active'; src.property_count = props.length; }
+        // Load into queue (filter already liked/dismissed)
+        const fresh = props.filter(p => !likedIds.has(p.id) && !dismissedIds.has(p.id));
+        queue = fresh;
+        currentIndex = 0;
+        setSyncState('ok', 'synced');
+        renderSources();
+        updateSearchPanel();
+        document.getElementById('swipe-location-label').textContent = source.site_name;
+        switchTab('swipe');
+        renderCards();
+        showToast(`Loaded ${fresh.length} properties from ${source.site_name}`);
+      } catch (err) {
+        await sb.from('scrape_sources').update({ status: 'error' }).eq('id', source.id);
+        const src = householdSources.find(s => s.id === source.id);
+        if (src) src.status = 'error';
+        setSyncState('error', 'error');
+        renderSources();
+        showToast('Scrape failed: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Browse'; }
+      }
+    }
+
+    function renderSources() {
+      const list = document.getElementById('source-list');
+      const label = document.getElementById('sources-list-label');
+      list.innerHTML = '';
+      if (!householdSources.length) {
+        label.style.display = 'none';
+        return;
+      }
+      label.style.display = 'block';
+      householdSources.forEach(src => {
+        const div = document.createElement('div');
+        div.className = 'source-card';
+        div.id = 'source-card-' + src.id;
+        let statusHtml = '';
+        if (src.status === 'active') statusHtml = `<span class="source-status active">● Active · ${src.property_count || 0} listings</span>`;
+        else if (src.status === 'error') statusHtml = `<span class="source-status error">● Error scraping</span>`;
+        else statusHtml = `<span class="source-status pending">○ Not yet scraped</span>`;
+        div.innerHTML = `
+          <div class="source-icon">${src.site_icon || '🌐'}</div>
+          <div class="source-info">
+            <div class="source-name">${src.site_name}</div>
+            <div class="source-url">${src.url}</div>
+            ${statusHtml}
+          </div>
+          <div class="source-actions">
+            <button class="source-browse-btn" onclick="scrapeSource(${JSON.stringify(src).replace(/"/g, '&quot;')})">Browse</button>
+            <button class="source-delete-btn" onclick="deleteSource('${src.id}')" title="Remove">✕</button>
+          </div>`;
+        list.appendChild(div);
+      });
+    }
+
+    function updateSearchPanel() {
+      const sub = document.getElementById('search-sub');
+      const emptySubEl = document.getElementById('search-empty-sub');
+      const emptyBtn = document.getElementById('search-empty-btn');
+      if (!householdSources.length) {
+        if (sub) sub.textContent = 'Add sources to browse live listings';
+        if (emptySubEl) emptySubEl.textContent = 'You haven\'t added any sources yet. Add a Rightmove or Zoopla URL to start browsing real listings.';
+        if (emptyBtn) emptyBtn.style.display = 'inline-block';
+      } else {
+        const active = householdSources.filter(s => s.status === 'active');
+        if (sub) sub.textContent = `${householdSources.length} source${householdSources.length !== 1 ? 's' : ''} · go to Sources to browse`;
+        if (emptySubEl) emptySubEl.textContent = 'Go to Sources, hit Browse on a source to load listings.';
+        if (emptyBtn) emptyBtn.style.display = 'none';
+      }
     }
 
     // ── Boot ──────────────────────────────────────────────
