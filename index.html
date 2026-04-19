@@ -414,12 +414,12 @@
           <input
             type="text"
             id="location-input"
-            placeholder="Filter by city, e.g. Manchester"
+            placeholder="Town or area, e.g. Exeter"
             autocomplete="off"
           />
-          <button class="location-search-btn" onclick="lookupAndSearch()">Search</button>
+          <button class="location-search-btn" onclick="searchAllSources()">Search</button>
         </div>
-        <p class="location-hint" id="location-hint">Leave blank to browse all sample listings</p>
+        <p class="location-hint" id="location-hint">Filters apply to all your sources</p>
       </div>
 
       <div class="field-grid">
@@ -428,10 +428,12 @@
           <select id="s-type">
             <option value="">Any</option>
             <option value="detached">Detached</option>
-            <option value="semi_detached">Semi-detached</option>
+            <option value="semi-detached">Semi-detached</option>
             <option value="terraced">Terraced</option>
-            <option value="flats">Flats</option>
+            <option value="flat">Flat</option>
             <option value="bungalow">Bungalow</option>
+            <option value="cottage">Cottage</option>
+            <option value="farm">Farm / Land</option>
           </select>
         </div>
         <div class="field">
@@ -445,6 +447,17 @@
           </select>
         </div>
         <div class="field">
+          <label>Min price</label>
+          <select id="s-minprice">
+            <option value="">No min</option>
+            <option value="100000">£100,000</option>
+            <option value="200000">£200,000</option>
+            <option value="300000">£300,000</option>
+            <option value="500000">£500,000</option>
+            <option value="750000">£750,000</option>
+          </select>
+        </div>
+        <div class="field">
           <label>Max price</label>
           <select id="s-maxprice">
             <option value="">No limit</option>
@@ -455,16 +468,7 @@
             <option value="600000">£600,000</option>
             <option value="750000">£750,000</option>
             <option value="1000000">£1,000,000</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Radius</label>
-          <select id="s-radius">
-            <option value="0">This area</option>
-            <option value="1">1 mile</option>
-            <option value="3">3 miles</option>
-            <option value="5">5 miles</option>
-            <option value="10">10 miles</option>
+            <option value="2000000">£2,000,000</option>
           </select>
         </div>
       </div>
@@ -567,7 +571,7 @@
 
   <script>
     const SUPABASE_URL = 'https://zfgrpnzgvzohjddaxntg.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmZ3JwbnpndnpvaGpkZGF4bnRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NTA4MTYsImV4cCI6MjA5MjAyNjgxNn0.6LsKB2o31Ixp2CJvRhvnKMC8UBnZkwOS2w-wMc0DLp4';
+    const SUPABASE_KEY = 'sb_publishable_EfZGdOPHvDnNQEjeDUGeDQ_NNg46SBl';
 
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -633,34 +637,47 @@
       if (meta) meta.textContent = likedIds.size === 0 ? 'No saved properties yet' : `${likedIds.size} propert${likedIds.size === 1 ? 'y' : 'ies'} saved by your household`;
     }
 
-    // ── Search (sample data) ──────────────────────────────
-    function lookupAndSearch() {
-      const inputVal = document.getElementById('location-input').value.trim();
-      const beds = document.getElementById('s-beds').value;
-      const maxPrice = document.getElementById('s-maxprice').value;
-      const propType = document.getElementById('s-type').value;
+    // ── Search ────────────────────────────────────────────
+    function getFilters() {
+      return {
+        location: document.getElementById('location-input').value.trim(),
+        beds:     document.getElementById('s-beds').value,
+        minPrice: document.getElementById('s-minprice').value,
+        maxPrice: document.getElementById('s-maxprice').value,
+        type:     document.getElementById('s-type').value,
+      };
+    }
 
-      let results = SAMPLE_PROPERTIES.filter(p => {
-        if (inputVal && !p.address.toLowerCase().includes(inputVal.toLowerCase())) return false;
-        if (beds && p.beds < parseInt(beds)) return false;
-        if (maxPrice) {
-          const numPrice = parseInt(p.price.replace(/[^0-9]/g, ''));
-          if (numPrice > parseInt(maxPrice)) return false;
-        }
-        if (propType && p.type.toLowerCase().replace(/[^a-z]/g, '_') !== propType) return false;
-        return true;
-      }).filter(p => !dismissedIds.has(p.id) && !likedIds.has(p.id));
-
-      if (!results.length) {
-        showToast('No properties match — try adjusting your filters');
+    async function searchAllSources() {
+      if (!householdSources.length) {
+        showToast('Add a source first →');
+        switchTab('sources');
         return;
       }
-
-      queue = results;
+      // Browse all sources in sequence, merge results into one queue
+      const filters = getFilters();
+      const allProps = [];
+      setSyncState('syncing', 'searching');
+      for (const source of householdSources) {
+        try {
+          const props = await fetchFromSource(source, filters);
+          allProps.push(...props);
+        } catch {}
+      }
+      const fresh = allProps.filter(p => !likedIds.has(p.id) && !dismissedIds.has(p.id));
+      if (!fresh.length) {
+        setSyncState('ok', 'synced');
+        showToast('No properties found — try adjusting your filters');
+        return;
+      }
+      queue = fresh;
       currentIndex = 0;
-      document.getElementById('swipe-location-label').textContent = inputVal || 'Sample listings';
+      setSyncState('ok', 'synced');
+      const label = filters.location || `${householdSources.length} source${householdSources.length !== 1 ? 's' : ''}`;
+      document.getElementById('swipe-location-label').textContent = label;
       switchTab('swipe');
       renderCards();
+      showToast(`Loaded ${fresh.length} properties`);
     }
 
     function renderCards() {
@@ -995,33 +1012,39 @@
       showToast('Source removed');
     }
 
+    async function fetchFromSource(source, filters = {}) {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/scrape-properties`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
+        body: JSON.stringify({ url: source.url, household_id: currentHousehold.id, filters })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Scrape failed');
+      return json.properties || [];
+    }
+
     async function scrapeSource(source) {
       const card = document.getElementById('source-card-' + source.id);
       const btn = card?.querySelector('.source-browse-btn');
-      if (btn) { btn.disabled = true; btn.textContent = 'Scraping…'; }
-      setSyncState('syncing', 'scraping');
+      if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+      setSyncState('syncing', 'loading');
       try {
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/scrape-properties`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
-          body: JSON.stringify({ url: source.url, household_id: currentHousehold.id })
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Scrape failed');
-        const props = json.properties || [];
-        if (!props.length) { showToast('No properties found — the site may block scrapers'); return; }
+        const filters = getFilters();
+        const props = await fetchFromSource(source, filters);
+        if (!props.length) { showToast('No properties found — try different filters'); return; }
         // Update source status
         await sb.from('scrape_sources').update({ status: 'active', last_scraped_at: new Date().toISOString(), property_count: props.length }).eq('id', source.id);
         const src = householdSources.find(s => s.id === source.id);
         if (src) { src.status = 'active'; src.property_count = props.length; }
-        // Load into queue (filter already liked/dismissed)
+        // Filter already liked/dismissed
         const fresh = props.filter(p => !likedIds.has(p.id) && !dismissedIds.has(p.id));
         queue = fresh;
         currentIndex = 0;
         setSyncState('ok', 'synced');
         renderSources();
         updateSearchPanel();
-        document.getElementById('swipe-location-label').textContent = source.site_name;
+        const label = filters.location ? `${source.site_name} · ${filters.location}` : source.site_name;
+        document.getElementById('swipe-location-label').textContent = label;
         switchTab('swipe');
         renderCards();
         showToast(`Loaded ${fresh.length} properties from ${source.site_name}`);
@@ -1031,7 +1054,7 @@
         if (src) src.status = 'error';
         setSyncState('error', 'error');
         renderSources();
-        showToast('Scrape failed: ' + err.message);
+        showToast('Failed: ' + err.message);
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Browse'; }
       }
