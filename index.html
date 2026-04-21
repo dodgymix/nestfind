@@ -317,6 +317,8 @@
     .source-browse-btn:disabled { background: var(--text-tertiary); cursor: not-allowed; }
     .source-delete-btn { font-size: 13px; background: none; border: none; cursor: pointer; color: var(--text-tertiary); padding: 4px; transition: color 0.15s; }
     .source-delete-btn:hover { color: var(--red); }
+    .source-rescrape-btn { font-size: 14px; background: none; border: 0.5px solid var(--border-mid); border-radius: 6px; cursor: pointer; color: var(--text-secondary); padding: 3px 7px; transition: color 0.15s, border-color 0.15s; font-family: 'DM Sans', sans-serif; }
+    .source-rescrape-btn:hover { color: var(--green); border-color: var(--green); }
     .source-scraping { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
   </style>
 </head>
@@ -633,34 +635,124 @@
       if (meta) meta.textContent = likedIds.size === 0 ? 'No saved properties yet' : `${likedIds.size} propert${likedIds.size === 1 ? 'y' : 'ies'} saved by your household`;
     }
 
-    // ── Search (sample data) ──────────────────────────────
-    function lookupAndSearch() {
+    // ── Property mapping ──────────────────────────────────
+    function mapSupabaseProperty(row) {
+      const rd = row.raw_data || {};
+      return {
+        id: row.id,
+        price: '£' + Math.round(row.price / 100).toLocaleString('en-GB'),
+        address: row.display_address || rd.town || '',
+        beds: row.bedrooms,
+        baths: null,
+        sqft: null,
+        type: rd.tenure || '',
+        garden: (rd.tags || []).some(t => /garden/i.test(t)),
+        thumb: rd.featured_photo || null,
+        photos: rd.featured_photo ? [rd.featured_photo] : [],
+        desc: rd.short_description || '',
+        agent: row.source || '',
+        url: row.source_url || null,
+        tags: rd.tags || [],
+        town: rd.town || '',
+        _source: 'supabase'
+      };
+    }
+
+    // ── Search (Supabase-first, sample fallback) ──────────
+    async function lookupAndSearch() {
       const inputVal = document.getElementById('location-input').value.trim();
       const beds = document.getElementById('s-beds').value;
       const maxPrice = document.getElementById('s-maxprice').value;
       const propType = document.getElementById('s-type').value;
 
-      let results = SAMPLE_PROPERTIES.filter(p => {
-        if (inputVal && !p.address.toLowerCase().includes(inputVal.toLowerCase())) return false;
-        if (beds && p.beds < parseInt(beds)) return false;
-        if (maxPrice) {
-          const numPrice = parseInt(p.price.replace(/[^0-9]/g, ''));
-          if (numPrice > parseInt(maxPrice)) return false;
+      setSyncState('syncing', 'searching');
+      const searchBtn = document.querySelector('.location-search-btn');
+      if (searchBtn) { searchBtn.disabled = true; searchBtn.textContent = 'Searching…'; }
+
+      try {
+        // Build Supabase query against properties table
+        let query = sb.from('properties').select('*');
+
+        // Filter by household's scrape sources so we only show relevant properties
+        if (currentHousehold) {
+          const sourceIds = householdSources.map(s => s.id);
+          if (sourceIds.length) {
+            // Get distinct source names (e.g. 'stags') from the household's scrape_sources
+            const sourceNames = [...new Set(householdSources.map(s => {
+              try { return new URL(s.url).hostname.replace('www.', '').split('.')[0]; } catch { return null; }
+            }).filter(Boolean))];
+            if (sourceNames.length) query = query.in('source', sourceNames);
+          }
         }
-        if (propType && p.type.toLowerCase().replace(/[^a-z]/g, '_') !== propType) return false;
-        return true;
-      }).filter(p => !dismissedIds.has(p.id) && !likedIds.has(p.id));
 
-      if (!results.length) {
-        showToast('No properties match — try adjusting your filters');
-        return;
+        // Text filter on address / town
+        if (inputVal) {
+          query = query.or(`display_address.ilike.%${inputVal}%,raw_data->>town.ilike.%${inputVal}%`);
+        }
+
+        // Bedrooms filter
+        if (beds) query = query.gte('bedrooms', parseInt(beds));
+
+        // Max price filter (stored in pence)
+        if (maxPrice) query = query.lte('price', parseInt(maxPrice) * 100);
+
+        // Order by most recently seen
+        query = query.order('last_seen_at', { ascending: false }).limit(200);
+
+        const { data: rows, error } = await query;
+
+        if (error) throw error;
+
+        let results = (rows || [])
+          .map(mapSupabaseProperty)
+          .filter(p => !dismissedIds.has(p.id) && !likedIds.has(p.id));
+
+        // Property type client-side filter (raw_data.tenure isn't always structured)
+        if (propType && results.length) {
+          results = results.filter(p => {
+            const t = (p.type || '').toLowerCase().replace(/[^a-z]/g, '_');
+            return t.includes(propType.replace(/_/g, ''));
+          });
+        }
+
+        if (results.length) {
+          queue = results;
+          currentIndex = 0;
+          setSyncState('ok', 'synced');
+          document.getElementById('swipe-location-label').textContent = inputVal || 'All listings';
+          switchTab('swipe');
+          renderCards();
+          return;
+        }
+
+        // No Supabase results — fall back to sample data with a notice
+        showToast('No listings in DB yet — showing sample data');
+        let sampleResults = SAMPLE_PROPERTIES.filter(p => {
+          if (inputVal && !p.address.toLowerCase().includes(inputVal.toLowerCase())) return false;
+          if (beds && p.beds < parseInt(beds)) return false;
+          if (maxPrice && parseInt(p.price.replace(/[^0-9]/g, '')) > parseInt(maxPrice)) return false;
+          if (propType && p.type.toLowerCase().replace(/[^a-z]/g, '_') !== propType) return false;
+          return true;
+        }).filter(p => !dismissedIds.has(p.id) && !likedIds.has(p.id));
+
+        if (!sampleResults.length) {
+          showToast('No properties match — try adjusting your filters');
+          setSyncState('ok', 'synced');
+          return;
+        }
+        queue = sampleResults;
+        currentIndex = 0;
+        setSyncState('ok', 'synced');
+        document.getElementById('swipe-location-label').textContent = inputVal || 'Sample listings';
+        switchTab('swipe');
+        renderCards();
+
+      } catch (err) {
+        setSyncState('error', 'error');
+        showToast('Search failed: ' + err.message);
+      } finally {
+        if (searchBtn) { searchBtn.disabled = false; searchBtn.textContent = 'Search'; }
       }
-
-      queue = results;
-      currentIndex = 0;
-      document.getElementById('swipe-location-label').textContent = inputVal || 'Sample listings';
-      switchTab('swipe');
-      renderCards();
     }
 
     function renderCards() {
@@ -686,6 +778,12 @@
         const photoHtml = prop.thumb
           ? `<img src="${prop.thumb}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.querySelector('.card-photo-placeholder').style.display='flex'" /><div class="card-photo-placeholder" style="display:none;position:absolute;inset:0;">🏠</div>`
           : `<div class="card-photo-placeholder">🏠</div>`;
+        // Build extra tags: beds, baths, sqft from structured fields; garden + raw tags from Supabase
+        const extraTags = (prop.tags || [])
+          .filter(t => !/garden/i.test(t)) // garden shown separately
+          .slice(0, 3)
+          .map(t => `<span class="card-tag">${t}</span>`)
+          .join('');
         card.innerHTML = `
           <div class="card-photo">
             ${photoHtml}
@@ -700,6 +798,7 @@
               ${prop.baths ? `<span class="card-tag">${prop.baths} bath</span>` : ''}
               ${prop.sqft ? `<span class="card-tag">${Number(prop.sqft).toLocaleString()} sq ft</span>` : ''}
               ${prop.garden ? '<span class="card-tag green">Garden</span>' : ''}
+              ${extraTags}
             </div>
             ${prop.desc ? `<div class="card-desc">${prop.desc}</div>` : ''}
             ${prop.agent ? `<div class="card-agent">${prop.agent}</div>` : ''}
@@ -900,7 +999,7 @@
               ${prop.garden ? '<span class="liked-tag">Garden</span>' : ''}
             </div>
             ${prop.likedByName ? `<div class="liked-by">♥ ${prop.likedByName}</div>` : ''}
-            ${prop.url ? `<a href="${prop.url}" target="_blank" class="liked-link">View on Zoopla →</a>` : ''}
+            ${prop.url ? `<a href="${prop.url}" target="_blank" class="liked-link">View listing →</a>` : ''}
           </div>
           <button class="liked-remove" onclick="removeLiked('${prop.id}')" title="Remove">✕</button>`;
         grid.appendChild(card);
@@ -998,6 +1097,59 @@
     async function scrapeSource(source) {
       const card = document.getElementById('source-card-' + source.id);
       const btn = card?.querySelector('.source-browse-btn');
+
+      // If source is active (has DB data), load from Supabase directly first
+      if (source.status === 'active') {
+        await browseSourceFromDB(source, btn);
+        return;
+      }
+
+      // Otherwise trigger the scrape edge function
+      await runScrape(source, btn);
+    }
+
+    async function browseSourceFromDB(source, btn) {
+      if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+      setSyncState('syncing', 'loading');
+      try {
+        // Derive the source name the same way properties are stored
+        let sourceName;
+        try { sourceName = new URL(source.url).hostname.replace('www.', '').split('.')[0]; } catch { sourceName = source.site_name; }
+
+        const { data: rows, error } = await sb
+          .from('properties')
+          .select('*')
+          .eq('source', sourceName)
+          .order('last_seen_at', { ascending: false })
+          .limit(200);
+
+        if (error) throw error;
+
+        const props = (rows || []).map(mapSupabaseProperty).filter(p => !likedIds.has(p.id) && !dismissedIds.has(p.id));
+
+        if (!props.length) {
+          // No DB rows yet — fall through to a fresh scrape
+          showToast('No cached listings found — scraping now…');
+          await runScrape(source, btn);
+          return;
+        }
+
+        queue = props;
+        currentIndex = 0;
+        setSyncState('ok', 'synced');
+        document.getElementById('swipe-location-label').textContent = source.site_name;
+        switchTab('swipe');
+        renderCards();
+        showToast(`Loaded ${props.length} properties from ${source.site_name}`);
+      } catch (err) {
+        setSyncState('error', 'error');
+        showToast('Load failed: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Browse'; }
+      }
+    }
+
+    async function runScrape(source, btn) {
       if (btn) { btn.disabled = true; btn.textContent = 'Scraping…'; }
       setSyncState('syncing', 'scraping');
       try {
@@ -1010,12 +1162,24 @@
         if (!res.ok) throw new Error(json.error || 'Scrape failed');
         const props = json.properties || [];
         if (!props.length) { showToast('No properties found — the site may block scrapers'); return; }
+
         // Update source status
         await sb.from('scrape_sources').update({ status: 'active', last_scraped_at: new Date().toISOString(), property_count: props.length }).eq('id', source.id);
         const src = householdSources.find(s => s.id === source.id);
         if (src) { src.status = 'active'; src.property_count = props.length; }
-        // Load into queue (filter already liked/dismissed)
-        const fresh = props.filter(p => !likedIds.has(p.id) && !dismissedIds.has(p.id));
+
+        // After scraping, load the freshly-written DB rows through mapSupabaseProperty
+        // so we get a consistent property shape (the edge fn may return raw rows or mapped objects)
+        let mapped;
+        if (props[0]?.raw_data !== undefined) {
+          // Edge function returned raw DB rows
+          mapped = props.map(mapSupabaseProperty);
+        } else {
+          // Edge function returned already-shaped objects (old format)
+          mapped = props;
+        }
+        const fresh = mapped.filter(p => !likedIds.has(p.id) && !dismissedIds.has(p.id));
+
         queue = fresh;
         currentIndex = 0;
         setSyncState('ok', 'synced');
@@ -1063,6 +1227,7 @@
           </div>
           <div class="source-actions">
             <button class="source-browse-btn" onclick="scrapeSource(${JSON.stringify(src).replace(/"/g, '&quot;')})">Browse</button>
+            ${src.status === 'active' ? `<button class="source-rescrape-btn" onclick="runScrape(${JSON.stringify(src).replace(/"/g, '&quot;')}, this.parentElement.querySelector('.source-browse-btn'))" title="Re-scrape">↻</button>` : ''}
             <button class="source-delete-btn" onclick="deleteSource('${src.id}')" title="Remove">✕</button>
           </div>`;
         list.appendChild(div);
