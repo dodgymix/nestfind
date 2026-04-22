@@ -929,13 +929,17 @@
           sb.from('dismissed_properties').select('property_id').eq('household_id', currentHousehold.id)
         ]);
         householdMembers = membersRes.data || [];
-        likedProperties = (likedRes.data || []).map(r => ({ ...r.property_data, likedByName: r.liked_by_name }));
+        likedProperties = (likedRes.data || []).map(r => {
+          const pd = typeof r.property_data === 'string' ? JSON.parse(r.property_data) : (r.property_data || {});
+          return { ...pd, likedByName: r.liked_by_name };
+        });
         likedIds = new Set((likedRes.data || []).map(r => r.property_id));
         dismissedIds = new Set((dismissedRes.data || []).map(r => r.property_id));
         await loadSources();
         setSyncState('ok', 'synced');
         updateBadge();
         updateSearchPanel();
+        renderLiked();
       } catch { setSyncState('error', 'offline'); }
     }
 
