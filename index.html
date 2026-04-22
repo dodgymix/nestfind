@@ -948,23 +948,28 @@
       likedProperties.push({ ...prop, likedByName: currentUserName });
       updateBadge();
       setSyncState('syncing', 'saving');
-      try {
-        await sb.from('liked_properties').upsert({
-          household_id: currentHousehold.id, session_id: currentUser.id,
-          property_id: prop.id, property_data: prop,
-          liked_by_user_id: currentUser.id, liked_by_name: currentUserName
-        }, { onConflict: 'session_id,property_id' });
+      const { error: likedErr } = await sb.from('liked_properties').upsert({
+        household_id: currentHousehold.id, session_id: currentUser.id,
+        property_id: String(prop.id), property_data: prop,
+        liked_by_user_id: currentUser.id, liked_by_name: currentUserName
+      }, { onConflict: 'session_id,property_id' });
+      if (likedErr) {
+        setSyncState('error', 'save failed');
+        showToast('Failed to save property: ' + likedErr.message);
+        console.error('saveLiked error:', likedErr);
+      } else {
         setSyncState('ok', 'synced');
-      } catch { setSyncState('error', 'offline'); }
+      }
     }
 
     async function saveDismissed(propId) {
       dismissedIds.add(propId);
-      try {
-        await sb.from('dismissed_properties').upsert({
-          household_id: currentHousehold.id, session_id: currentUser.id, property_id: propId
-        }, { onConflict: 'session_id,property_id' });
-      } catch {}
+      const { error: dismissErr } = await sb.from('dismissed_properties').upsert({
+        household_id: currentHousehold.id, session_id: currentUser.id, property_id: String(propId)
+      }, { onConflict: 'session_id,property_id' });
+      if (dismissErr) {
+        console.error('saveDismissed error:', dismissErr);
+      }
     }
 
     async function removeLiked(propId) {
