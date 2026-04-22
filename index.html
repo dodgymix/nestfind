@@ -320,6 +320,53 @@
     .source-rescrape-btn { font-size: 14px; background: none; border: 0.5px solid var(--border-mid); border-radius: 6px; cursor: pointer; color: var(--text-secondary); padding: 3px 7px; transition: color 0.15s, border-color 0.15s; font-family: 'DM Sans', sans-serif; }
     .source-rescrape-btn:hover { color: var(--green); border-color: var(--green); }
     .source-scraping { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+
+    /* SAVED SEARCHES */
+    .saved-searches-section { padding: 0 20px 20px; }
+    .saved-searches-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; margin-top: 18px; }
+    .saved-searches-label { font-size: 11px; font-weight: 500; color: var(--text-secondary); letter-spacing: 0.08em; text-transform: uppercase; }
+    .saved-searches-list { display: flex; flex-direction: column; gap: 8px; }
+    .saved-search-card {
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.15s;
+      cursor: default;
+    }
+    .saved-search-card:hover { border-color: var(--green); }
+    .saved-search-icon { font-size: 18px; flex-shrink: 0; line-height: 1; }
+    .saved-search-info { flex: 1; min-width: 0; }
+    .saved-search-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .saved-search-filters { font-size: 11px; color: var(--text-tertiary); font-weight: 300; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .saved-search-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .saved-search-run-btn {
+      font-size: 11px; padding: 5px 11px; background: var(--green); color: white;
+      border: none; border-radius: 6px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+      font-weight: 500; white-space: nowrap; transition: background 0.15s;
+    }
+    .saved-search-run-btn:hover { background: var(--green-dark); }
+    .saved-search-del-btn {
+      font-size: 14px; background: none; border: none; cursor: pointer;
+      color: var(--text-tertiary); padding: 4px; line-height: 1; transition: color 0.15s;
+    }
+    .saved-search-del-btn:hover { color: var(--red); }
+
+    .save-search-btn-wrap { margin-top: 12px; display: flex; justify-content: center; }
+    .save-search-btn {
+      font-size: 12px; padding: 7px 16px;
+      background: transparent; color: var(--green);
+      border: 0.5px solid var(--green); border-radius: 20px;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      font-weight: 500; transition: background 0.15s, color 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .save-search-btn:hover { background: var(--green-light); }
+    .save-search-btn.saved { color: var(--text-secondary); border-color: var(--border-mid); }
+    .save-search-btn.saved:hover { background: var(--bg-secondary); }
   </style>
 </head>
 <body>
@@ -470,6 +517,17 @@
           </select>
         </div>
       </div>
+    </div>
+    <div class="save-search-btn-wrap">
+      <button class="save-search-btn" id="save-search-btn" onclick="saveCurrentSearch()">
+        <span>＋</span> Save this search
+      </button>
+    </div>
+    <div class="saved-searches-section" id="saved-searches-section" style="display:none;">
+      <div class="saved-searches-header">
+        <span class="saved-searches-label">Saved searches</span>
+      </div>
+      <div class="saved-searches-list" id="saved-searches-list"></div>
     </div>
     <div class="empty-state" id="search-empty">
       <div class="empty-icon">🏡</div>
@@ -755,7 +813,154 @@
       }
     }
 
-    function renderCards() {
+    // ── Saved Searches ────────────────────────────────────
+    let savedSearches = [];
+
+    function getCurrentSearchParams() {
+      return {
+        location: document.getElementById('location-input').value.trim(),
+        type: document.getElementById('s-type').value,
+        beds: document.getElementById('s-beds').value,
+        maxPrice: document.getElementById('s-maxprice').value,
+        radius: document.getElementById('s-radius').value,
+      };
+    }
+
+    function buildFilterSubtitle(p) {
+      const parts = [];
+      if (p.type) parts.push({ detached:'Detached', semi_detached:'Semi-detached', terraced:'Terraced', flats:'Flats', bungalow:'Bungalow' }[p.type] || p.type);
+      if (p.beds) parts.push(p.beds + '+ beds');
+      if (p.maxPrice) parts.push('Up to £' + Number(p.maxPrice).toLocaleString('en-GB'));
+      if (p.radius && p.radius !== '0') parts.push(p.radius + ' mile radius');
+      return parts.length ? parts.join(' · ') : 'No filters';
+    }
+
+    async function saveCurrentSearch() {
+      const p = getCurrentSearchParams();
+      const name = p.location || 'All listings';
+
+      // Check for exact duplicate
+      const dup = savedSearches.find(s =>
+        s.location === p.location && s.type === p.type &&
+        s.beds === p.beds && s.maxPrice === p.maxPrice && s.radius === p.radius
+      );
+      if (dup) { showToast('This search is already saved'); return; }
+
+      const entry = { id: Date.now().toString(), name, ...p, saved_at: new Date().toISOString() };
+
+      // Persist to Supabase if we have a household
+      if (currentHousehold && currentUser) {
+        try {
+          const { data, error } = await sb.from('saved_searches').insert({
+            household_id: currentHousehold.id,
+            user_id: currentUser.id,
+            name: entry.name,
+            filters: { type: p.type, beds: p.beds, maxPrice: p.maxPrice, radius: p.radius },
+            location: p.location,
+          }).select().single();
+          if (!error && data) entry.id = data.id;
+        } catch (_) {}
+      }
+
+      savedSearches.push(entry);
+      persistSavedSearchesLocally();
+      renderSavedSearches();
+      showToast('Search saved ✓');
+
+      const btn = document.getElementById('save-search-btn');
+      btn.innerHTML = '<span>✓</span> Saved';
+      btn.classList.add('saved');
+      setTimeout(() => {
+        btn.innerHTML = '<span>＋</span> Save this search';
+        btn.classList.remove('saved');
+      }, 2000);
+    }
+
+    function persistSavedSearchesLocally() {
+      try { localStorage.setItem('nestfind_saved_searches_' + (currentUser?.id || 'anon'), JSON.stringify(savedSearches)); } catch (_) {}
+    }
+
+    async function loadSavedSearches() {
+      savedSearches = [];
+
+      // Try Supabase first
+      if (currentHousehold && currentUser) {
+        try {
+          const { data, error } = await sb.from('saved_searches')
+            .select('*')
+            .eq('household_id', currentHousehold.id)
+            .order('created_at', { ascending: false });
+          if (!error && data?.length) {
+            savedSearches = data.map(r => ({
+              id: r.id,
+              name: r.name,
+              location: r.location || '',
+              type: r.filters?.type || '',
+              beds: r.filters?.beds || '',
+              maxPrice: r.filters?.maxPrice || '',
+              radius: r.filters?.radius || '0',
+              saved_at: r.created_at,
+            }));
+            renderSavedSearches();
+            return;
+          }
+        } catch (_) {}
+      }
+
+      // Fall back to localStorage
+      try {
+        const stored = localStorage.getItem('nestfind_saved_searches_' + (currentUser?.id || 'anon'));
+        if (stored) savedSearches = JSON.parse(stored);
+      } catch (_) {}
+      renderSavedSearches();
+    }
+
+    async function deleteSavedSearch(id) {
+      savedSearches = savedSearches.filter(s => s.id !== id);
+      persistSavedSearchesLocally();
+
+      // Also delete from Supabase
+      if (currentHousehold) {
+        try { await sb.from('saved_searches').delete().eq('id', id); } catch (_) {}
+      }
+      renderSavedSearches();
+      showToast('Saved search removed');
+    }
+
+    function runSavedSearch(s) {
+      document.getElementById('location-input').value = s.location || '';
+      document.getElementById('s-type').value = s.type || '';
+      document.getElementById('s-beds').value = s.beds || '';
+      document.getElementById('s-maxprice').value = s.maxPrice || '';
+      document.getElementById('s-radius').value = s.radius || '0';
+      lookupAndSearch();
+    }
+
+    function renderSavedSearches() {
+      const section = document.getElementById('saved-searches-section');
+      const list = document.getElementById('saved-searches-list');
+      if (!savedSearches.length) { section.style.display = 'none'; return; }
+      section.style.display = 'block';
+      list.innerHTML = '';
+      savedSearches.forEach(s => {
+        const subtitle = buildFilterSubtitle(s);
+        const card = document.createElement('div');
+        card.className = 'saved-search-card';
+        card.innerHTML = `
+          <div class="saved-search-icon">🔍</div>
+          <div class="saved-search-info">
+            <div class="saved-search-name">${s.name}</div>
+            <div class="saved-search-filters">${subtitle}</div>
+          </div>
+          <div class="saved-search-actions">
+            <button class="saved-search-run-btn" onclick="runSavedSearch(${JSON.stringify(s).replace(/"/g,'&quot;')})">Search</button>
+            <button class="saved-search-del-btn" onclick="deleteSavedSearch('${s.id}')" title="Remove">✕</button>
+          </div>`;
+        list.appendChild(card);
+      });
+    }
+
+
       const stack = document.getElementById('card-stack');
       stack.innerHTML = '';
       const remaining = queue.length - currentIndex;
@@ -936,6 +1141,7 @@
         likedIds = new Set((likedRes.data || []).map(r => r.property_id));
         dismissedIds = new Set((dismissedRes.data || []).map(r => r.property_id));
         await loadSources();
+        loadSavedSearches(); // non-blocking, renders when ready
         setSyncState('ok', 'synced');
         updateBadge();
         updateSearchPanel();
